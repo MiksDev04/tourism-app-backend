@@ -19,69 +19,69 @@ const TEMPLATE_PATH = path.join(__dirname, '../../sample/ON Blank Form.xlsx');
 
 // ─── Country / Region Definitions ────────────────────────────────────────────
 const kCountryRows = [
-  { country: 'BRUNEI', row: 36 },
-  { country: 'CAMBODIA', row: 37 },
-  { country: 'INDONESIA', row: 38 },
-  { country: 'LAOS', row: 39 },
-  { country: 'MALAYSIA', row: 40 },
-  { country: 'MYANMAR', row: 41 },
-  { country: 'SINGAPORE', row: 42 },
-  { country: 'THAILAND', row: 43 },
-  { country: 'VIETNAM', row: 44 },
-  { country: 'CHINA', row: 48 },
-  { country: 'HONGKONG', row: 49 },
-  { country: 'JAPAN', row: 50 },
-  { country: 'KOREA', row: 51 },
-  { country: 'TAIWAN', row: 52 },
-  { country: 'BANGLADESH', row: 56 },
-  { country: 'INDIA', row: 57 },
-  { country: 'IRAN', row: 58 },
-  { country: 'NEPAL', row: 59 },
-  { country: 'PAKISTAN', row: 60 },
-  { country: 'SRI LANKA', row: 61 },
-  { country: 'BAHRAIN', row: 65 },
-  { country: 'EGYPT', row: 66 },
-  { country: 'ISRAEL', row: 67 },
-  { country: 'JORDAN', row: 68 },
-  { country: 'KUWAIT', row: 69 },
-  { country: 'SAUDI ARABIA', row: 70 },
-  { country: 'UNITED ARAB EMIRATES', row: 71 },
-  { country: 'CANADA', row: 78 },
-  { country: 'MEXICO', row: 79 },
-  { country: 'USA', row: 80 },
-  { country: 'ARGENTINA', row: 84 },
-  { country: 'BRAZIL', row: 85 },
-  { country: 'COLOMBIA', row: 86 },
-  { country: 'PERU', row: 87 },
-  { country: 'VENEZUELA', row: 88 },
-  { country: 'AUSTRIA', row: 95 },
-  { country: 'BELGIUM', row: 96 },
-  { country: 'FRANCE', row: 97 },
-  { country: 'GERMANY', row: 98 },
-  { country: 'LUXEMBOURG', row: 99 },
-  { country: 'NETHERLANDS', row: 100 },
-  { country: 'SWITZERLAND', row: 101 },
-  { country: 'DENMARK', row: 105 },
-  { country: 'FINLAND', row: 106 },
-  { country: 'IRELAND', row: 107 },
-  { country: 'NORWAY', row: 108 },
-  { country: 'SWEDEN', row: 109 },
-  { country: 'UNITED KINGDOM', row: 110 },
-  { country: 'GREECE', row: 114 },
-  { country: 'ITALY', row: 115 },
-  { country: 'PORTUGAL', row: 116 },
-  { country: 'SPAIN', row: 117 },
-  { country: 'UNION OF SERBIA AND MONTENEGRO', row: 118 },
-  { country: 'COMMONWEALTH OF INDEPENDENT STATES', row: 122 },
-  { country: 'POLAND', row: 123 },
-  { country: 'RUSSIA', row: 124 },
-  { country: 'AUSTRALIA', row: 131 },
-  { country: 'GUAM', row: 132 },
-  { country: 'NAURU', row: 133 },
-  { country: 'NEW ZEALAND', row: 134 },
-  { country: 'PAPUA NEW GUINEA', row: 135 },
-  { country: 'NIGERIA', row: 142 },
-  { country: 'SOUTH AFRICA', row: 143 },
+  { country: 'BRUNEI', daily: 36, sum: 36 },
+  { country: 'CAMBODIA', daily: 37, sum: 37 },
+  { country: 'INDONESIA', daily: 38, sum: 38 },
+  { country: 'LAOS', daily: 39, sum: 39 },
+  { country: 'MALAYSIA', daily: 40, sum: 40 },
+  { country: 'MYANMAR', daily: 41, sum: 41 },
+  { country: 'SINGAPORE', daily: 42, sum: 42 },
+  { country: 'THAILAND', daily: 43, sum: 43 },
+  { country: 'VIETNAM', daily: 44, sum: 44 },
+  { country: 'CHINA', daily: 48, sum: 48 },
+  { country: 'HONGKONG', daily: 49, sum: 49 },
+  { country: 'JAPAN', daily: 50, sum: 50 },
+  { country: 'KOREA', daily: 51, sum: 51 },
+  { country: 'TAIWAN', daily: 52, sum: 52 },
+  { country: 'BANGLADESH', daily: 56, sum: 56 },
+  { country: 'INDIA', daily: 57, sum: 57 },
+  { country: 'IRAN', daily: 58, sum: 58 },
+  { country: 'NEPAL', daily: 59, sum: 59 },
+  { country: 'PAKISTAN', daily: 60, sum: 60 },
+  { country: 'SRI LANKA', daily: 61, sum: 61 },
+  { country: 'BAHRAIN', daily: 66, sum: 65 },
+  { country: 'EGYPT', daily: 67, sum: 66 },
+  { country: 'ISRAEL', daily: 68, sum: 67 },
+  { country: 'JORDAN', daily: 69, sum: 68 },
+  { country: 'KUWAIT', daily: 70, sum: 69 },
+  { country: 'SAUDI ARABIA', daily: 71, sum: 70 },
+  { country: 'UNITED ARAB EMIRATES', daily: 72, sum: 71 },
+  { country: 'CANADA', daily: 77, sum: 77 },
+  { country: 'MEXICO', daily: 78, sum: 78 },
+  { country: 'USA', daily: 79, sum: 79 },
+  { country: 'ARGENTINA', daily: 83, sum: 83 },
+  { country: 'BRAZIL', daily: 84, sum: 84 },
+  { country: 'COLOMBIA', daily: 85, sum: 85 },
+  { country: 'PERU', daily: 86, sum: 86 },
+  { country: 'VENEZUELA', daily: 87, sum: 87 },
+  { country: 'AUSTRIA', daily: 92, sum: 92 },
+  { country: 'BELGIUM', daily: 93, sum: 93 },
+  { country: 'FRANCE', daily: 94, sum: 94 },
+  { country: 'GERMANY', daily: 95, sum: 95 },
+  { country: 'LUXEMBOURG', daily: 96, sum: 96 },
+  { country: 'NETHERLANDS', daily: 97, sum: 97 },
+  { country: 'SWITZERLAND', daily: 98, sum: 98 },
+  { country: 'DENMARK', daily: 102, sum: 102 },
+  { country: 'FINLAND', daily: 103, sum: 103 },
+  { country: 'IRELAND', daily: 104, sum: 104 },
+  { country: 'NORWAY', daily: 105, sum: 105 },
+  { country: 'SWEDEN', daily: 106, sum: 106 },
+  { country: 'UNITED KINGDOM', daily: 107, sum: 107 },
+  { country: 'GREECE', daily: 111, sum: 111 },
+  { country: 'ITALY', daily: 112, sum: 112 },
+  { country: 'PORTUGAL', daily: 113, sum: 113 },
+  { country: 'SPAIN', daily: 114, sum: 114 },
+  { country: 'UNION OF SERBIA AND MONTENEGRO', daily: 115, sum: 115 },
+  { country: 'COMMONWEALTH OF INDEPENDENT STATES', daily: 119, sum: 119 },
+  { country: 'POLAND', daily: 120, sum: 120 },
+  { country: 'RUSSIA', daily: 121, sum: 121 },
+  { country: 'AUSTRALIA', daily: 126, sum: 125 },
+  { country: 'GUAM', daily: 127, sum: 126 },
+  { country: 'NAURU', daily: 128, sum: 127 },
+  { country: 'NEW ZEALAND', daily: 129, sum: 128 },
+  { country: 'PAPUA NEW GUINEA', daily: 130, sum: 129 },
+  { country: 'NIGERIA', daily: 134, sum: 135 },
+  { country: 'SOUTH AFRICA', daily: 135, sum: 136 },
 ];
 
 const kMonthNames = [
@@ -98,12 +98,59 @@ const kAccTypes = [
   { key: 'others', row: 15 },
 ];
 
-// ─── FIX: "Other Countries" catch-all row ────────────────────────────────────
-// Foreign nationals whose country is NOT listed in kCountryRows are accumulated
-// here instead of being silently dropped.
-// ⚠️  VERIFY this row number matches the "Others" / "Other Countries" row in
-//     your actual "ON Blank Form.xlsx" template before deploying.
-const kOtherCountriesRow = 144;
+// ─── Row Mappings for Daily vs Sum Sheets ────────────────────────────────────
+const kRows = {
+  daily: {
+    phResFilipino: 28,
+    phResForeign: 29,
+    phResTotal: 30,
+    otherCountries: 139,
+    totalForeign: 141,
+    unspecified: 149,
+    overseasFilipino: 143,
+    grandTotal: 145,
+    roomsOccupied: 154,
+    roomsAvailable: 155,
+    guestNights: 156,
+    occupancyRate: 158,
+    alos: 159,
+    maleStart: 161,
+    femaleStart: 167,
+  },
+  sum: {
+    phResFilipino: 28,
+    phResForeign: 29,
+    phResTotal: 30,
+    otherCountries: 140,
+    totalForeign: 142,
+    unspecified: 150,
+    overseasFilipino: 144,
+    grandTotal: 146,
+    roomsOccupied: 155,
+    roomsAvailable: 156,
+    guestNights: 157,
+    occupancyRate: 159,
+    alos: 160,
+    maleStart: 162,
+    femaleStart: 168,
+  },
+};
+
+// ─── Regional Groupings for Subtotals ────────────────────────────────────────
+const kRegionalGroups = [
+  { label: 'ASEAN', dailyRow: 45, sumRow: 45, countries: ['BRUNEI', 'CAMBODIA', 'INDONESIA', 'LAOS', 'MALAYSIA', 'MYANMAR', 'SINGAPORE', 'THAILAND', 'VIETNAM'] },
+  { label: 'EAST ASIA', dailyRow: 53, sumRow: 53, countries: ['CHINA', 'HONGKONG', 'JAPAN', 'KOREA', 'TAIWAN'] },
+  { label: 'SOUTH ASIA', dailyRow: 62, sumRow: 62, countries: ['BANGLADESH', 'INDIA', 'IRAN', 'NEPAL', 'PAKISTAN', 'SRI LANKA'] },
+  { label: 'MIDDLE EAST', dailyRow: 73, sumRow: 72, countries: ['BAHRAIN', 'EGYPT', 'ISRAEL', 'JORDAN', 'KUWAIT', 'SAUDI ARABIA', 'UNITED ARAB EMIRATES'] },
+  { label: 'NORTH AMERICA', dailyRow: 80, sumRow: 80, countries: ['CANADA', 'MEXICO', 'USA'] },
+  { label: 'SOUTH AMERICA', dailyRow: 88, sumRow: 88, countries: ['ARGENTINA', 'BRAZIL', 'COLOMBIA', 'PERU', 'VENEZUELA'] },
+  { label: 'WESTERN EUROPE', dailyRow: 99, sumRow: 99, countries: ['AUSTRIA', 'BELGIUM', 'FRANCE', 'GERMANY', 'LUXEMBOURG', 'NETHERLANDS', 'SWITZERLAND'] },
+  { label: 'NORTHERN EUROPE', dailyRow: 108, sumRow: 108, countries: ['DENMARK', 'FINLAND', 'IRELAND', 'NORWAY', 'SWEDEN', 'UNITED KINGDOM'] },
+  { label: 'SOUTHERN EUROPE', dailyRow: 116, sumRow: 116, countries: ['GREECE', 'ITALY', 'PORTUGAL', 'SPAIN', 'UNION OF SERBIA AND MONTENEGRO'] },
+  { label: 'EASTERN EUROPE', dailyRow: 122, sumRow: 122, countries: ['COMMONWEALTH OF INDEPENDENT STATES', 'POLAND', 'RUSSIA'] },
+  { label: 'AUSTRALASIA', dailyRow: 131, sumRow: 130, countries: ['AUSTRALIA', 'GUAM', 'NAURU', 'NEW ZEALAND', 'PAPUA NEW GUINEA'] },
+  { label: 'AFRICA', dailyRow: 136, sumRow: 137, countries: ['NIGERIA', 'SOUTH AFRICA'] },
+];
 
 // Total column index (AG = 33).  Day 1 → col B (2), Day 31 → col AF (32),
 // so the grand-total column is col AG (33).  The PDF renderer also stops at 33.
@@ -148,31 +195,43 @@ function _otherCountriesTotal(countryByDay, dayKey) {
   return total;
 }
 
-// ─── FIX: Purge named ranges orphaned by template-sheet deletion ─────────────
-// ExcelJS carries named ranges (print areas, _xlnm.Print_Area, user-defined
-// names) from the template into the workbook model.  After removeWorksheet(),
-// those ranges still reference the deleted sheets — Excel detects them on open
-// and shows the "Removed Records: Named range" recovery dialog.
-// Solution: filter the model down to ranges whose sheet still exists.
+// ─── FIX: Purge ALL named ranges from the workbook ───────────────────────────
+// The generated report needs zero named ranges. Any that survive from the
+// template reference the deleted template sheets, causing Excel's
+// "Removed Records: Named range" recovery dialog on open.
+//
+// ExcelJS stores defined names differently across major versions:
+//   v4.x  →  workbook._definedNames._defined  (plain object, keyed by name)
+//   v3.x  →  workbook._definedNames.model     (array)
+//   other →  various internal Map/object stores
+//
+// We try every known path and wipe unconditionally.
 function _purgeOrphanedDefinedNames(workbook) {
   try {
-    const validSheets = new Set(workbook.worksheets.map(ws => ws.name));
+    const dn = workbook._definedNames ?? workbook.definedNames;
+    if (!dn) return;
 
-    // Clean workbook-level defined names
-    const dm = workbook.definedNames || workbook._definedNames;
-    if (dm && Array.isArray(dm.model)) {
-      dm.model = dm.model.filter(dn => {
-        const ranges = [].concat(dn.ranges ?? dn.range ?? []);
-        if (!ranges.length) return false;
-        return ranges.every(r => {
-          // If the range contains #REF!, it's definitely orphaned.
-          if (String(r).includes('#REF!')) return false;
-          // Handles both  'Sheet Name'!$A$1  and  SheetName!$A$1
-          const m = String(r).match(/^'([^']+)'!|^([^'!][^!]*)!/);
-          const sheetName = m ? (m[1] ?? m[2]) : null;
-          return sheetName && validSheets.has(sheetName);
-        });
-      });
+    // ── Path A: ExcelJS 4.x — _defined is { [name]: { [sheetName]: addr } } ─
+    if (typeof dn._defined === 'object' && dn._defined !== null) {
+      dn._defined = {};
+      return;
+    }
+
+    // ── Path B: model array (ExcelJS 3.x or rebuilt 4.x) ────────────────────
+    if (Array.isArray(dn.model)) {
+      dn.model = [];
+      return;
+    }
+
+    // ── Path C: Map or other iterable store ─────────────────────────────────
+    for (const prop of ['_map', '_names', '_namedRanges']) {
+      const store = dn[prop];
+      if (!store) continue;
+      if (typeof store.clear === 'function') { store.clear(); return; }
+      if (typeof store === 'object') {
+        for (const k of Object.keys(store)) delete store[k];
+        return;
+      }
     }
   } catch (err) {
     console.warn('[report] Named-range cleanup skipped:', err.message);
@@ -276,9 +335,10 @@ router.post('/reports/generate', adminGuard, async (req, res, next) => {
       _buildMonthlySummarySheet(sheet, allTwelveMonthsMerged, totalRoomsAll, year, adminName, city, province);
     }
 
-    // ── FIX: Clear print areas from template sheets before removing them.
-    //    Sometimes ExcelJS persists the global _xlnm.Print_Area link even
-    //    if the sheet is removed from the workbook.
+    // ── Clear print areas on template sheets before removing them.
+    //    This signals ExcelJS to drop the _xlnm.Print_Area entry for each
+    //    template sheet — though _purgeOrphanedDefinedNames below is the
+    //    authoritative cleanup that handles whatever ExcelJS misses.
     [templateSheet, summarySheetTemplate, monthlySheetTemplate].forEach(ws => {
       if (ws.pageSetup) ws.pageSetup.printArea = null;
     });
@@ -288,8 +348,9 @@ router.post('/reports/generate', adminGuard, async (req, res, next) => {
     workbook.removeWorksheet(summarySheetTemplate.id);
     workbook.removeWorksheet(monthlySheetTemplate.id);
 
-    // ── FIX: Remove named ranges that now point at the deleted template sheets.
-    //    Without this Excel shows a "Removed Records: Named range" recovery dialog.
+    // ── FIX: Wipe ALL named ranges so no orphaned references survive into the
+    //    output workbook.xml.  Without this Excel shows the
+    //    "Removed Records: Named range" recovery dialog on every open.
     _purgeOrphanedDefinedNames(workbook);
 
     const reportId    = uuidv4();
@@ -306,6 +367,7 @@ router.post('/reports/generate', adminGuard, async (req, res, next) => {
     await _archiveMonthRecords(month, year);
 
     const fileUrl = `/uploads/reports/${excelFileName}`;
+    const pdfUrl  = `/uploads/reports/${pdfFileName}`;
     await db.pool.execute(
       `INSERT INTO reports (id, report_type, period_month, period_year, file_url, generated_by,
         include_sheet_establishment, include_sheet_country_sum, include_sheet_monthly)
@@ -316,7 +378,7 @@ router.post('/reports/generate', adminGuard, async (req, res, next) => {
       ]
     );
 
-    res.json({ message: 'Report generated successfully', fileUrl });
+    res.json({ message: 'Report generated successfully', fileUrl, pdfUrl });
   } catch (err) {
     console.error('Report Generation Error:', err);
     next(err);
@@ -352,10 +414,17 @@ function _copySheetProperties(src, dst) {
       // (AG30) as-is.  Converting them to regular formulas during copy avoids
       // this dependency.
       if (cell.type === ExcelJS.ValueType.Formula) {
-        dstCell.value = {
-          formula: cell.formula,
-          result:  cell.result
-        };
+        if (cell.formula && cell.formula.includes('!')) {
+          // ── FIX: "Bake" cross-sheet formulas ───────────────────────────────
+          // Formulas like ='Sheet'!A1 will break when the source sheet is
+          // deleted. Replacing them with their cached result avoids #REF!.
+          dstCell.value = cell.result ?? 0;
+        } else {
+          dstCell.value = {
+            formula: cell.formula,
+            result:  cell.result
+          };
+        }
       } else {
         dstCell.value = cell.value;
       }
@@ -571,7 +640,14 @@ async function _archiveMonthRecords(month, year) {
 
 // ─── Excel Builders ──────────────────────────────────────────────────────────
 
+// ==============================================================================================
+// ======================================== DAILY SHEET =========================================
+// ==============================================================================================
+
+
 function _buildDailySheet(sheet, biz, md, month, year, daysInMonth, adminName) {
+  const r = kRows.daily;
+
   // ── Header cells ────────────────────────────────────────────────────────────
   sheet.getCell('B3').value = {
     richText: [
@@ -609,26 +685,33 @@ function _buildDailySheet(sheet, biz, md, month, year, daysInMonth, adminName) {
   const sex = (d, s, cat)  => md.sexByDay[d]?.[s]?.[cat] || 0;
 
   // ── Residency rows ───────────────────────────────────────────────────────────
-  setDayValues(28, d => res(d, 'philippine_resident_filipino'));
-  setDayValues(29, d => res(d, 'philippine_resident_foreign'));
+  setDayValues(r.phResFilipino, d => res(d, 'philippine_resident_filipino'));
+  setDayValues(r.phResForeign, d => res(d, 'philippine_resident_foreign'));
   
   // TOTAL PHILIPPINE RESIDENTS
-  setDayValues(30, d => res(d, 'philippine_resident_filipino') + res(d, 'philippine_resident_foreign'));
+  setDayValues(r.phResTotal, d => res(d, 'philippine_resident_filipino') + res(d, 'philippine_resident_foreign'));
 
-  kCountryRows.forEach(c => setDayValues(c.row, d => cnt(c.country, d)));
+  kCountryRows.forEach(c => setDayValues(c.daily, d => cnt(c.country, d)));
+
+  // ── Regional Subtotals (Daily) ──────────────────────────────────────────────
+  kRegionalGroups.forEach(g => {
+    setDayValues(g.dailyRow, d => {
+      return g.countries.reduce((sum, country) => sum + cnt(country, d), 0);
+    });
+  });
 
   // FIX: write catch-all "Other Countries" row so unlisted foreign nationals
   // are not silently dropped from the sheet.
-  setDayValues(kOtherCountriesRow, d => _otherCountriesTotal(md.countryByDay, d));
+  setDayValues(r.otherCountries, d => _otherCountriesTotal(md.countryByDay, d));
 
   // TOTAL FOREIGN RESIDENTS
-  setDayValues(145, d => res(d, 'foreign_resident'));
+  setDayValues(r.totalForeign, d => res(d, 'foreign_resident'));
 
-  setDayValues(148, d => res(d, 'unspecified_guest'));
-  setDayValues(151, d => res(d, 'overseas_filipino'));
+  setDayValues(r.unspecified, d => res(d, 'unspecified_guest'));
+  setDayValues(r.overseasFilipino, d => res(d, 'overseas_filipino'));
 
   // GRAND TOTAL
-  setDayValues(152, d => {
+  setDayValues(r.grandTotal, d => {
     return res(d, 'philippine_resident_filipino') +
            res(d, 'philippine_resident_foreign') +
            res(d, 'foreign_resident') +
@@ -637,19 +720,19 @@ function _buildDailySheet(sheet, biz, md, month, year, daysInMonth, adminName) {
   });
 
   // ── Rooms & guest-nights ────────────────────────────────────────────────────
-  setDayValues(160, d => md.roomsOccupied[d] || 0);
-  setDayValues(161, () => biz.total_rooms);
-  setDayValues(162, d => md.guestNightsByDay[d] || 0);
+  setDayValues(r.roomsOccupied, d => md.roomsOccupied[d] || 0);
+  setDayValues(r.roomsAvailable, () => biz.total_rooms);
+  setDayValues(r.guestNights, d => md.guestNightsByDay[d] || 0);
 
   // ── Computed metrics ─────────────────────────────────────────────────────────
   // Occupancy rate = rooms used / total rooms × 100  (stored as a real number)
-  setDayValues(165, d => {
+  setDayValues(r.occupancyRate, d => {
     if (!biz.total_rooms) return 0;
     return parseFloat(((md.roomsOccupied[d] || 0) / biz.total_rooms * 100).toFixed(2));
   });
   // ALOS for arrivals on day d = total guest-nights generated by those arrivals
   // divided by the number of guests who checked in on day d.
-  setDayValues(166, d => {
+  setDayValues(r.alos, d => {
     const arrivals = Object.values(md.residentsByDay[d] || {}).reduce((a, b) => a + b, 0);
     if (!arrivals) return 0;
     return parseFloat(((md.guestNightsPerArrivalDay[d] || 0) / arrivals).toFixed(2));
@@ -661,9 +744,17 @@ function _buildDailySheet(sheet, biz, md, month, year, daysInMonth, adminName) {
     setDayValues(rowStart + 2, d => sex(d, gender, 'foreign_resident'));
     setDayValues(rowStart + 3, d => sex(d, gender, 'overseas_filipino'));
     setDayValues(rowStart + 4, d => sex(d, gender, 'unspecified_guest'));
+    // TOTAL per sex
+    setDayValues(rowStart + 5, d => {
+      return sex(d, gender, 'philippine_resident_filipino') +
+             sex(d, gender, 'philippine_resident_foreign') +
+             sex(d, gender, 'foreign_resident') +
+             sex(d, gender, 'overseas_filipino') +
+             sex(d, gender, 'unspecified_guest');
+    });
   };
-  setSexValues(170, 'male');
-  setSexValues(177, 'female');
+  setSexValues(r.maleStart, 'male');
+  setSexValues(r.femaleStart, 'female');
 
   // ── FIX: Total column (AG = kTotalCol) ─────────────────────────────────────
   // Writes the month grand-total to column AG for every data row.
@@ -681,65 +772,73 @@ function _buildDailySheet(sheet, biz, md, month, year, daysInMonth, adminName) {
                         (md.residentsByDay[0]?.['overseas_filipino'] ?? 0);
 
   // Residency totals
-  writeTotal(28, md.residentsByDay[0]?.['philippine_resident_filipino'] ?? 0);
-  writeTotal(29, md.residentsByDay[0]?.['philippine_resident_foreign'] ?? 0);
-  writeTotal(30, phTotal);
+  writeTotal(r.phResFilipino, md.residentsByDay[0]?.['philippine_resident_filipino'] ?? 0);
+  writeTotal(r.phResForeign, md.residentsByDay[0]?.['philippine_resident_foreign'] ?? 0);
+  writeTotal(r.phResTotal, phTotal);
 
   kCountryRows.forEach(c =>
-    writeTotal(c.row, md.countryByDay[c.country]?.[0] ?? 0)
+    writeTotal(c.daily, md.countryByDay[c.country]?.[0] ?? 0)
   );
-  writeTotal(kOtherCountriesRow, _otherCountriesTotal(md.countryByDay, 0));
-  writeTotal(145, foreignTotal);
 
-  writeTotal(148, md.residentsByDay[0]?.['unspecified_guest'] ?? 0);
-  writeTotal(151, md.residentsByDay[0]?.['overseas_filipino'] ?? 0);
-  writeTotal(152, grandTotalAll);
+  // ── Regional Subtotals (Totals Column) ──────────────────────────────────────
+  kRegionalGroups.forEach(g => {
+    const subtotal = g.countries.reduce((sum, country) => {
+      return sum + (md.countryByDay[country.toUpperCase()]?.[0] ?? 0);
+    }, 0);
+    writeTotal(g.dailyRow, subtotal);
+  });
+
+  writeTotal(r.otherCountries, _otherCountriesTotal(md.countryByDay, 0));
+  writeTotal(r.totalForeign, foreignTotal);
+
+  writeTotal(r.unspecified, md.residentsByDay[0]?.['unspecified_guest'] ?? 0);
+  writeTotal(r.overseasFilipino, md.residentsByDay[0]?.['overseas_filipino'] ?? 0);
+  writeTotal(r.grandTotal, grandTotalAll);
 
   // Rooms & nights totals
   const totalRoomsOccAll = Object.values(md.roomsOccupied).reduce((a, b) => a + b, 0);
   const totalRoomsAvail  = (biz.total_rooms || 0) * daysInMonth;
-  writeTotal(160, totalRoomsOccAll);
-  writeTotal(161, totalRoomsAvail);
-  writeTotal(162, md.guestNights);
+  writeTotal(r.roomsOccupied, totalRoomsOccAll);
+  writeTotal(r.roomsAvailable, totalRoomsAvail);
+  writeTotal(r.guestNights, md.guestNights);
 
   // Occupancy rate for the full month
-  writeTotal(165, totalRoomsAvail > 0
+  writeTotal(r.occupancyRate, totalRoomsAvail > 0
     ? parseFloat((totalRoomsOccAll / totalRoomsAvail * 100).toFixed(2))
     : 0
   );
   // ALOS for the full month = total guest-nights / total arrivals
   const grandTotalArrivals = Object.values(md.residentsByDay[0] ?? {}).reduce((a, b) => a + b, 0);
-  writeTotal(166, grandTotalArrivals > 0
+  writeTotal(r.alos, grandTotalArrivals > 0
     ? parseFloat((md.guestNights / grandTotalArrivals).toFixed(2))
     : 0
   );
 
   // Sex breakdown totals
-  writeTotal(171, sex(0, 'male', 'philippine_resident_filipino') + sex(0, 'male', 'philippine_resident_foreign'));
-  writeTotal(172, sex(0, 'male', 'foreign_resident'));
-  writeTotal(173, sex(0, 'male', 'overseas_filipino'));
-  writeTotal(174, sex(0, 'male', 'unspecified_guest'));
+  writeTotal(r.maleStart + 1, sex(0, 'male', 'philippine_resident_filipino') + sex(0, 'male', 'philippine_resident_foreign'));
+  writeTotal(r.maleStart + 2, sex(0, 'male', 'foreign_resident'));
+  writeTotal(r.maleStart + 3, sex(0, 'male', 'overseas_filipino'));
+  writeTotal(r.maleStart + 4, sex(0, 'male', 'unspecified_guest'));
+  writeTotal(r.maleStart + 5, sex(0, 'male', 'philippine_resident_filipino') + sex(0, 'male', 'philippine_resident_foreign') +
+                              sex(0, 'male', 'foreign_resident') + sex(0, 'male', 'overseas_filipino') + sex(0, 'male', 'unspecified_guest'));
 
-  writeTotal(178, sex(0, 'female', 'philippine_resident_filipino') + sex(0, 'female', 'philippine_resident_foreign'));
-  writeTotal(179, sex(0, 'female', 'foreign_resident'));
-  writeTotal(180, sex(0, 'female', 'overseas_filipino'));
-  writeTotal(181, sex(0, 'female', 'unspecified_guest'));
+  writeTotal(r.femaleStart + 1, sex(0, 'female', 'philippine_resident_filipino') + sex(0, 'female', 'philippine_resident_foreign'));
+  writeTotal(r.femaleStart + 2, sex(0, 'female', 'foreign_resident'));
+  writeTotal(r.femaleStart + 3, sex(0, 'female', 'overseas_filipino'));
+  writeTotal(r.femaleStart + 4, sex(0, 'female', 'unspecified_guest'));
+  writeTotal(r.femaleStart + 5, sex(0, 'female', 'philippine_resident_filipino') + sex(0, 'female', 'philippine_resident_foreign') +
+                                sex(0, 'female', 'foreign_resident') + sex(0, 'female', 'overseas_filipino') + sex(0, 'female', 'unspecified_guest'));
 
-  // ── Footer ──────────────────────────────────────────────────────────────────
-  const ownerName = [biz.owner_first_name, biz.owner_middle_name, biz.owner_last_name].filter(Boolean).join(' ') || '______________________';
-  
-  sheet.getCell('A185').value = 'Prepared by:';
-  sheet.getCell('A186').value = ownerName.toUpperCase();
-  sheet.getCell('A187').value = 'Owner / Manager';
-
-  sheet.getCell('A189').value = 'Certified Correct by:';
-  sheet.getCell('A190').value = adminName.toUpperCase();
-  sheet.getCell('A191').value = 'Tourism Officer';
-
-  sheet.getCell('AF188').value = `Date Submitted: ${new Date().toLocaleDateString()}`;
 }
 
+// ==============================================================================================
+// ======================================== COUNTRY SUM =========================================
+// ==============================================================================================
+
+
 function _buildCountrySummarySheet(sheet, md, totalRoomsAll, month, year, daysInMonth, adminName, city, province) {
+  const r = kRows.sum;
+
   sheet.getCell('B3').value = 'Region: __4-A';
   sheet.getCell('A4').value = 'All Accommodation Establishments — Combined';
   sheet.getCell('A5').value = `${kMonthNames[month]}, ${year}`;
@@ -752,22 +851,28 @@ function _buildCountrySummarySheet(sheet, md, totalRoomsAll, month, year, daysIn
   const sex = (s, cat) => md.sexByDay[0]?.[s]?.[cat] || 0;
 
   // ── Residency rows (column B = grand total for the month) ────────────────────
-  sheet.getCell('B28').value = res('philippine_resident_filipino');
-  sheet.getCell('B29').value = res('philippine_resident_foreign');
+  sheet.getCell(`B${r.phResFilipino}`).value = res('philippine_resident_filipino');
+  sheet.getCell(`B${r.phResForeign}`).value = res('philippine_resident_foreign');
   
   // TOTAL PHILIPPINE RESIDENTS
-  sheet.getCell('B30').value = res('philippine_resident_filipino') + res('philippine_resident_foreign');
+  sheet.getCell(`B${r.phResTotal}`).value = res('philippine_resident_filipino') + res('philippine_resident_foreign');
 
-  kCountryRows.forEach(c => { sheet.getCell(`B${c.row}`).value = cnt(c.country); });
+  kCountryRows.forEach(c => { sheet.getCell(`B${c.sum}`).value = cnt(c.country); });
+
+  // ── Regional Subtotals (Sum) ────────────────────────────────────────────────
+  kRegionalGroups.forEach(g => {
+    const subtotal = g.countries.reduce((sum, country) => sum + cnt(country), 0);
+    sheet.getCell(`B${g.sumRow}`).value = subtotal;
+  });
 
   // FIX: write catch-all "Other Countries" total
-  sheet.getCell(`B${kOtherCountriesRow}`).value = _otherCountriesTotal(md.countryByDay, 0);
+  sheet.getCell(`B${r.otherCountries}`).value = _otherCountriesTotal(md.countryByDay, 0);
 
   // TOTAL FOREIGN RESIDENTS
-  sheet.getCell('B145').value = res('foreign_resident');
+  sheet.getCell(`B${r.totalForeign}`).value = res('foreign_resident');
 
-  sheet.getCell('B148').value = res('unspecified_guest');
-  sheet.getCell('B151').value = res('overseas_filipino');
+  sheet.getCell(`B${r.unspecified}`).value = res('unspecified_guest');
+  sheet.getCell(`B${r.overseasFilipino}`).value = res('overseas_filipino');
 
   // GRAND TOTAL
   const grandTotal =
@@ -776,20 +881,20 @@ function _buildCountrySummarySheet(sheet, md, totalRoomsAll, month, year, daysIn
     res('foreign_resident') +
     res('unspecified_guest') +
     res('overseas_filipino');
-  sheet.getCell('B152').value = grandTotal;
+  sheet.getCell(`B${r.grandTotal}`).value = grandTotal;
 
   // ── Rooms & nights ──────────────────────────────────────────────────────────
   const totalRoomsOcc  = Object.values(md.roomsOccupied).reduce((a, b) => a + b, 0);
   const totalAvailRoom = totalRoomsAll * daysInMonth;
-  sheet.getCell('B160').value = totalRoomsOcc;
-  sheet.getCell('B161').value = totalAvailRoom;
-  sheet.getCell('B162').value = md.guestNights;
+  sheet.getCell(`B${r.roomsOccupied}`).value = totalRoomsOcc;
+  sheet.getCell(`B${r.roomsAvailable}`).value = totalAvailRoom;
+  sheet.getCell(`B${r.guestNights}`).value = md.guestNights;
 
   // ── Computed metrics ─────────────────────────────────────────────────────────
-  sheet.getCell('B165').value = totalAvailRoom > 0
+  sheet.getCell(`B${r.occupancyRate}`).value = totalAvailRoom > 0
     ? parseFloat((totalRoomsOcc / totalAvailRoom * 100).toFixed(2))
     : 0;
-  sheet.getCell('B166').value = grandTotal > 0
+  sheet.getCell(`B${r.alos}`).value = grandTotal > 0
     ? parseFloat((md.guestNights / grandTotal).toFixed(2))
     : 0;
 
@@ -799,19 +904,26 @@ function _buildCountrySummarySheet(sheet, md, totalRoomsAll, month, year, daysIn
     sheet.getCell(`B${rowStart + 2}`).value = sex(gender, 'foreign_resident');
     sheet.getCell(`B${rowStart + 3}`).value = sex(gender, 'overseas_filipino');
     sheet.getCell(`B${rowStart + 4}`).value = sex(gender, 'unspecified_guest');
+    // TOTAL per sex
+    sheet.getCell(`B${rowStart + 5}`).value = 
+      sex(gender, 'philippine_resident_filipino') +
+      sex(gender, 'philippine_resident_foreign') +
+      sex(gender, 'foreign_resident') +
+      sex(gender, 'overseas_filipino') +
+      sex(gender, 'unspecified_guest');
   };
-  setSexValues(170, 'male');
-  setSexValues(177, 'female');
-
-  // ── Footer ──────────────────────────────────────────────────────────────────
-  sheet.getCell('A189').value = 'Certified Correct by:';
-  sheet.getCell('A190').value = adminName.toUpperCase();
-  sheet.getCell('A191').value = 'Tourism Officer';
-
-  sheet.getCell('AF188').value = `Date Submitted: ${new Date().toLocaleDateString()}`;
+  setSexValues(r.maleStart, 'male');
+  setSexValues(r.femaleStart, 'female');
 }
 
+// ==============================================================================================
+// ======================================== MONTHLY SUMMARY =========================================
+// ==============================================================================================
+
+
 function _buildMonthlySummarySheet(sheet, allMonths, totalRoomsAll, year, adminName, city, province) {
+  const r = kRows.sum;
+
   sheet.getCell('B3').value = 'Region: __4-A';
   sheet.getCell('A4').value = 'All Accommodation Establishments — Combined';
   sheet.getCell('A5').value = `${year}`;
@@ -836,25 +948,32 @@ function _buildMonthlySummarySheet(sheet, allMonths, totalRoomsAll, year, adminN
   const mSex = (m, s, cat)  => mdFor(m).sexByDay[0]?.[s]?.[cat] || 0;
 
   // ── Residency rows ───────────────────────────────────────────────────────────
-  setMonthValues(28, m => mRes(m, 'philippine_resident_filipino'));
-  setMonthValues(29, m => mRes(m, 'philippine_resident_foreign'));
+  setMonthValues(r.phResFilipino, m => mRes(m, 'philippine_resident_filipino'));
+  setMonthValues(r.phResForeign, m => mRes(m, 'philippine_resident_foreign'));
   
   // TOTAL PHILIPPINE RESIDENTS
-  setMonthValues(30, m => mRes(m, 'philippine_resident_filipino') + mRes(m, 'philippine_resident_foreign'));
+  setMonthValues(r.phResTotal, m => mRes(m, 'philippine_resident_filipino') + mRes(m, 'philippine_resident_foreign'));
 
-  kCountryRows.forEach(c => setMonthValues(c.row, m => mCnt(c.country, m)));
+  kCountryRows.forEach(c => setMonthValues(c.sum, m => mCnt(c.country, m)));
+
+  // ── Regional Subtotals (Monthly Summary) ────────────────────────────────────
+  kRegionalGroups.forEach(g => {
+    setMonthValues(g.sumRow, m => {
+      return g.countries.reduce((sum, country) => sum + mCnt(country, m), 0);
+    });
+  });
 
   // FIX: write "Other Countries" row for monthly sheet
-  setMonthValues(kOtherCountriesRow, m => _otherCountriesTotal(mdFor(m).countryByDay, 0));
+  setMonthValues(r.otherCountries, m => _otherCountriesTotal(mdFor(m).countryByDay, 0));
 
   // TOTAL FOREIGN RESIDENTS
-  setMonthValues(145, m => mRes(m, 'foreign_resident'));
+  setMonthValues(r.totalForeign, m => mRes(m, 'foreign_resident'));
 
-  setMonthValues(148, m => mRes(m, 'unspecified_guest'));
-  setMonthValues(151, m => mRes(m, 'overseas_filipino'));
+  setMonthValues(r.unspecified, m => mRes(m, 'unspecified_guest'));
+  setMonthValues(r.overseasFilipino, m => mRes(m, 'overseas_filipino'));
 
   // GRAND TOTAL
-  setMonthValues(152, m => {
+  setMonthValues(r.grandTotal, m => {
     return mRes(m, 'philippine_resident_filipino') +
            mRes(m, 'philippine_resident_foreign') +
            mRes(m, 'foreign_resident') +
@@ -863,12 +982,12 @@ function _buildMonthlySummarySheet(sheet, allMonths, totalRoomsAll, year, adminN
   });
 
   // ── Rooms & nights ──────────────────────────────────────────────────────────
-  setMonthValues(160, m => Object.values(mdFor(m).roomsOccupied).reduce((a, b) => a + b, 0));
-  setMonthValues(161, m => totalRoomsAll * new Date(year, m, 0).getDate());
-  setMonthValues(162, m => mdFor(m).guestNights);
+  setMonthValues(r.roomsOccupied, m => Object.values(mdFor(m).roomsOccupied).reduce((a, b) => a + b, 0));
+  setMonthValues(r.roomsAvailable, m => totalRoomsAll * new Date(year, m, 0).getDate());
+  setMonthValues(r.guestNights, m => mdFor(m).guestNights);
 
   // ── Computed metrics ─────────────────────────────────────────────────────────
-  setMonthValues(165, m => {
+  setMonthValues(r.occupancyRate, m => {
     const daysInM    = new Date(year, m, 0).getDate();
     const totalAvail = totalRoomsAll * daysInM;
     const totalOcc   = Object.values(mdFor(m).roomsOccupied).reduce((a, b) => a + b, 0);
@@ -876,12 +995,12 @@ function _buildMonthlySummarySheet(sheet, allMonths, totalRoomsAll, year, adminN
       ? parseFloat((totalOcc / totalAvail * 100).toFixed(2))
       : 0;
   });
-  setMonthValues(166, m => {
+  setMonthValues(r.alos, m => {
     const monthMd    = mdFor(m);
     const grandTotal =
       mRes(m, 'philippine_resident_filipino') +
       mRes(m, 'philippine_resident_foreign') +
-      mRes(m, 'foreign_resident') +    // ← covers all countries (listed + unlisted)
+      mRes(m, 'foreign_resident') +
       mRes(m, 'unspecified_guest') +
       mRes(m, 'overseas_filipino');
     return grandTotal > 0
@@ -895,16 +1014,17 @@ function _buildMonthlySummarySheet(sheet, allMonths, totalRoomsAll, year, adminN
     setMonthValues(rowStart + 2, m => mSex(m, gender, 'foreign_resident'));
     setMonthValues(rowStart + 3, m => mSex(m, gender, 'overseas_filipino'));
     setMonthValues(rowStart + 4, m => mSex(m, gender, 'unspecified_guest'));
+    // TOTAL per sex
+    setMonthValues(rowStart + 5, m => {
+      return mSex(m, gender, 'philippine_resident_filipino') +
+             mSex(m, gender, 'philippine_resident_foreign') +
+             mSex(m, gender, 'foreign_resident') +
+             mSex(m, gender, 'overseas_filipino') +
+             mSex(m, gender, 'unspecified_guest');
+    });
   };
-  setMonthlySexValues(170, 'male');
-  setMonthlySexValues(177, 'female');
-
-  // ── Footer ──────────────────────────────────────────────────────────────────
-  sheet.getCell('A189').value = 'Certified Correct by:';
-  sheet.getCell('A190').value = adminName.toUpperCase();
-  sheet.getCell('A191').value = 'Tourism Officer';
-
-  sheet.getCell('AF188').value = `Date Submitted: ${new Date().toLocaleDateString()}`;
+  setMonthlySexValues(r.maleStart, 'male');
+  setMonthlySexValues(r.femaleStart, 'female');
 }
 
 // ─── PDF Generation ──────────────────────────────────────────────────────────
@@ -914,8 +1034,10 @@ async function _generatePdfFromWorkbook(workbook, pdfPath, month, year) {
   const stream = fs.createWriteStream(pdfPath);
   doc.pipe(stream);
 
-  workbook.eachSheet((sheet, sheetIdx) => {
-    if (sheetIdx > 1) doc.addPage();
+  let pageCount = 0;
+  workbook.eachSheet((sheet) => {
+    pageCount++;
+    if (pageCount > 1) doc.addPage();
 
     const pointsPerExcelHeight = 0.75;
     const pointsPerExcelWidth  = 5.25;
