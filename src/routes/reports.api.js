@@ -1027,28 +1027,88 @@ function _buildMonthlySummarySheet(sheet, allMonths, totalRoomsAll, year, adminN
   setMonthlySexValues(r.femaleStart, 'female');
 }
 
+
+
+// ─── PDF Layout & Page-Break Config ─────────────────────────────────────────
+//
+// breakRows = row numbers (1-based, from ExcelJS) where a NEW PAGE begins
+//             BEFORE that row is rendered.
+//
+// Spreadsheet 1 & 3 — Daily / Monthly  →  landscape A3, 3 pages:
+//   page 1 : rows 1-32   (header, accommodation checkboxes, PH residents)
+//   page 2 : rows 33-90  (COUNTRY OF RESIDENCE — first half)   ← adjust if off
+//   page 3 : rows 91+    (COUNTRY OF RESIDENCE — second half)  ← adjust if off
+//
+// Spreadsheet 2 — Sum                  →  portrait  A3, 3 pages:
+//   page 1 : rows 1-65   (header … BAHRAIN)
+//   page 2 : rows 66-127 (EGYPT → before NEW ZEALAND)
+//   page 3 : rows 128+   (NEW ZEALAND onward)
+//
+const SHEET_PDF_CONFIG = {
+  daily:   { layout: 'landscape', size: 'A3', margin: 20, breakRows: [64, 124]  },
+  monthly: { layout: 'landscape', size: 'A3', margin: 20, breakRows: [64, 124]  },
+  sum:     { layout: 'portrait',  size: 'A3', margin: 20, breakRows: [66, 128] },
+};
+
+function _getSheetPdfConfig(sheetName) {
+  if (sheetName === 'AE DAE-1B by Country (Sum)') return SHEET_PDF_CONFIG.sum;
+  if (sheetName.includes('Monthly'))              return SHEET_PDF_CONFIG.monthly;
+  return SHEET_PDF_CONFIG.daily;
+}
+
 // ─── PDF Generation ──────────────────────────────────────────────────────────
 
 async function _generatePdfFromWorkbook(workbook, pdfPath, month, year) {
-  const doc    = new PDFDocument({ layout: 'landscape', size: 'A3', margin: 20 });
+  // Collect sheets first so we can inspect the first one before
+  // creating the PDFDocument (which needs the initial page layout).
+  const sheets = [];
+  workbook.eachSheet(sheet => sheets.push(sheet));
+
+  const firstConfig = sheets.length > 0
+    ? _getSheetPdfConfig(sheets[0].name)
+    : SHEET_PDF_CONFIG.daily;
+
+  const doc    = new PDFDocument({
+    layout: firstConfig.layout,
+    size:   firstConfig.size,
+    margin: firstConfig.margin,
+  });
   const stream = fs.createWriteStream(pdfPath);
   doc.pipe(stream);
 
-  let pageCount = 0;
-  workbook.eachSheet((sheet) => {
-    pageCount++;
-    if (pageCount > 1) doc.addPage();
+  const pointsPerExcelHeight = 0.75;
+  const pointsPerExcelWidth  = 5.25;
 
-    const pointsPerExcelHeight = 0.75;
-    const pointsPerExcelWidth  = 5.25;
+  let isFirstSheet = true;
 
-    let currentY = 20;
+  for (const sheet of sheets) {
+    const cfg = _getSheetPdfConfig(sheet.name);
+
+    // Each spreadsheet starts on its own page.
+    // The very first page is already created by the PDFDocument constructor.
+    if (!isFirstSheet) {
+      doc.addPage({ layout: cfg.layout, size: cfg.size, margin: cfg.margin });
+    }
+    isFirstSheet = false;
+
+    let currentY    = cfg.margin;
+    let breakRowIdx = 0;           // tracks which breakRow we're waiting for next
 
     sheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
       if (rowNumber > 197) return;
 
+      // ── Insert a page break BEFORE rendering the configured row ────────────
+      if (
+        breakRowIdx < cfg.breakRows.length &&
+        rowNumber === cfg.breakRows[breakRowIdx]
+      ) {
+        doc.addPage({ layout: cfg.layout, size: cfg.size, margin: cfg.margin });
+        currentY = cfg.margin;
+        breakRowIdx++;
+      }
+
       const rowHeight = (row.height || 15) * pointsPerExcelHeight;
-      let currentX = 20;
+      let currentX = cfg.margin;
 
       row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
         if (colNumber > 33) return;
@@ -1114,9 +1174,9 @@ async function _generatePdfFromWorkbook(workbook, pdfPath, month, year) {
 
           const align = cell.alignment?.horizontal || 'left';
           doc.text(text, currentX + 2, currentY + 2, {
-            width:   boxWidth  - 4,
-            height:  boxHeight - 4,
-            align:   align === 'center' ? 'center' : (align === 'right' ? 'right' : 'left'),
+            width:    boxWidth  - 4,
+            height:   boxHeight - 4,
+            align:    align === 'center' ? 'center' : (align === 'right' ? 'right' : 'left'),
             ellipsis: true,
           });
         }
@@ -1125,7 +1185,7 @@ async function _generatePdfFromWorkbook(workbook, pdfPath, month, year) {
       });
       currentY += rowHeight;
     });
-  });
+  }
 
   doc.end();
   return new Promise(resolve => stream.on('finish', resolve));
