@@ -109,6 +109,9 @@ const kRows = {
     unspecified: 149,
     overseasFilipino: 143,
     grandTotal: 145,
+    summaryPhTotal: 146,
+    summaryForeignTotal: 147,
+    summaryOverseasTotal: 148,
     roomsOccupied: 154,
     roomsAvailable: 155,
     guestNights: 156,
@@ -126,6 +129,9 @@ const kRows = {
     unspecified: 150,
     overseasFilipino: 144,
     grandTotal: 146,
+    summaryPhTotal: 147,
+    summaryForeignTotal: 148,
+    summaryOverseasTotal: 149,
     roomsOccupied: 155,
     roomsAvailable: 156,
     guestNights: 157,
@@ -715,9 +721,8 @@ function _buildDailySheet(sheet, biz, md, month, year, daysInMonth, adminName) {
   setDayValues(r.otherCountries, d => res(d, 'unlisted_foreign_resident') + res(d, 'unspecified_guest'));
 
   // TOTAL FOREIGN RESIDENTS
-  // LOGIC: Row 141/142 "TOTAL NON-PHILIPPINE RESIDENTS" is separate from Row 139/140.
-  // It should only include countries explicitly listed in kCountryRows.
-  setDayValues(r.totalForeign, d => res(d, 'listed_foreign_resident'));
+  // LOGIC: Row 141/142 "TOTAL NON-PHILIPPINE RESIDENTS" (Listed + Unlisted + Unspecified)
+  setDayValues(r.totalForeign, d => res(d, 'listed_foreign_resident') + res(d, 'unlisted_foreign_resident') + res(d, 'unspecified_guest'));
 
   setDayValues(r.unspecified, d => res(d, 'unlisted_foreign_resident') + res(d, 'unspecified_guest'));
   setDayValues(r.overseasFilipino, d => res(d, 'overseas_filipino'));
@@ -731,6 +736,11 @@ function _buildDailySheet(sheet, biz, md, month, year, daysInMonth, adminName) {
            res(d, 'unspecified_guest') +
            res(d, 'overseas_filipino');
   });
+
+  // ── Summary Rows (After Grand Total) ────────────────────────────────────────
+  setDayValues(r.summaryPhTotal, d => res(d, 'philippine_resident_filipino') + res(d, 'philippine_resident_foreign'));
+  setDayValues(r.summaryForeignTotal, d => res(d, 'listed_foreign_resident') + res(d, 'unlisted_foreign_resident') + res(d, 'unspecified_guest'));
+  setDayValues(r.summaryOverseasTotal, d => res(d, 'overseas_filipino'));
 
   // ── Rooms & guest-nights ────────────────────────────────────────────────────
   setDayValues(r.roomsOccupied, d => md.roomsOccupied[d] || 0);
@@ -754,12 +764,14 @@ function _buildDailySheet(sheet, biz, md, month, year, daysInMonth, adminName) {
   // ── Sex breakdown ────────────────────────────────────────────────────────────
   // FIX: corrected offsets (+0 to +4) to ensure data aligns with labels in template
   const setSexValues = (rowStart, gender) => {
-    setDayValues(rowStart, d => sex(d, gender, 'philippine_resident_filipino') + sex(d, gender, 'philippine_resident_foreign'));
-    setDayValues(rowStart + 1, d => sex(d, gender, 'listed_foreign_resident'));
-    setDayValues(rowStart + 2, d => sex(d, gender, 'overseas_filipino'));
-    setDayValues(rowStart + 3, d => sex(d, gender, 'unlisted_foreign_resident') + sex(d, gender, 'unspecified_guest'));
+    setDayValues(rowStart + 1, d => sex(d, gender, 'philippine_resident_filipino') + sex(d, gender, 'philippine_resident_foreign'));
+    // b. Non-Philippine/Foreign Residents (including unspecified)
+    setDayValues(rowStart + 2, d => sex(d, gender, 'listed_foreign_resident') + sex(d, gender, 'unlisted_foreign_resident') + sex(d, gender, 'unspecified_guest'));
+    setDayValues(rowStart + 3, d => sex(d, gender, 'overseas_filipino'));
+    // d. Others/Unspecified Guest
+    setDayValues(rowStart + 4, d => sex(d, gender, 'unlisted_foreign_resident') + sex(d, gender, 'unspecified_guest'));
     // TOTAL per sex
-    setDayValues(rowStart + 4, d => {
+    setDayValues(rowStart + 5, d => {
       return sex(d, gender, 'philippine_resident_filipino') +
              sex(d, gender, 'philippine_resident_foreign') +
              sex(d, gender, 'listed_foreign_resident') +
@@ -806,13 +818,19 @@ function _buildDailySheet(sheet, biz, md, month, year, daysInMonth, adminName) {
   });
 
   const othersAndUnspecifiedTotalAG = unlistedForeignTotal + unspecifiedTotal;
+  const totalForeignAG = listedForeignTotal + unlistedForeignTotal + unspecifiedTotal;
 
   writeTotal(r.otherCountries, othersAndUnspecifiedTotalAG);
-  writeTotal(r.totalForeign, listedForeignTotal);
+  writeTotal(r.totalForeign, totalForeignAG);
 
   writeTotal(r.unspecified, othersAndUnspecifiedTotalAG);
   writeTotal(r.overseasFilipino, overseasTotal);
   writeTotal(r.grandTotal, grandTotalAll);
+
+  // ── Summary Rows (Totals Column) ──────────────────────────────────────────
+  writeTotal(r.summaryPhTotal, phTotal);
+  writeTotal(r.summaryForeignTotal, totalForeignAG);
+  writeTotal(r.summaryOverseasTotal, overseasTotal);
 
   // Rooms & nights totals
   const totalRoomsOccAll = Object.values(md.roomsOccupied).reduce((a, b) => a + b, 0);
@@ -835,19 +853,19 @@ function _buildDailySheet(sheet, biz, md, month, year, daysInMonth, adminName) {
 
   // Sex breakdown totals
   // FIX: corrected offsets (+0 to +4) to ensure data aligns with labels in template
-  writeTotal(r.maleStart, sex(0, 'male', 'philippine_resident_filipino') + sex(0, 'male', 'philippine_resident_foreign'));
-  writeTotal(r.maleStart + 1, sex(0, 'male', 'listed_foreign_resident'));
-  writeTotal(r.maleStart + 2, sex(0, 'male', 'overseas_filipino'));
-  writeTotal(r.maleStart + 3, sex(0, 'male', 'unlisted_foreign_resident') + sex(0, 'male', 'unspecified_guest'));
-  writeTotal(r.maleStart + 4, sex(0, 'male', 'philippine_resident_filipino') + sex(0, 'male', 'philippine_resident_foreign') +
+  writeTotal(r.maleStart + 1, sex(0, 'male', 'philippine_resident_filipino') + sex(0, 'male', 'philippine_resident_foreign'));
+  writeTotal(r.maleStart + 2, sex(0, 'male', 'listed_foreign_resident') + sex(0, 'male', 'unlisted_foreign_resident') + sex(0, 'male', 'unspecified_guest'));
+  writeTotal(r.maleStart + 3, sex(0, 'male', 'overseas_filipino'));
+  writeTotal(r.maleStart + 4, sex(0, 'male', 'unlisted_foreign_resident') + sex(0, 'male', 'unspecified_guest'));
+  writeTotal(r.maleStart + 5, sex(0, 'male', 'philippine_resident_filipino') + sex(0, 'male', 'philippine_resident_foreign') +
                               sex(0, 'male', 'listed_foreign_resident') + sex(0, 'male', 'unlisted_foreign_resident') +
                               sex(0, 'male', 'overseas_filipino') + sex(0, 'male', 'unspecified_guest'));
 
-  writeTotal(r.femaleStart, sex(0, 'female', 'philippine_resident_filipino') + sex(0, 'female', 'philippine_resident_foreign'));
-  writeTotal(r.femaleStart + 1, sex(0, 'female', 'listed_foreign_resident'));
-  writeTotal(r.femaleStart + 2, sex(0, 'female', 'overseas_filipino'));
-  writeTotal(r.femaleStart + 3, sex(0, 'female', 'unlisted_foreign_resident') + sex(0, 'female', 'unspecified_guest'));
-  writeTotal(r.femaleStart + 4, sex(0, 'female', 'philippine_resident_filipino') + sex(0, 'female', 'philippine_resident_foreign') +
+  writeTotal(r.femaleStart + 1, sex(0, 'female', 'philippine_resident_filipino') + sex(0, 'female', 'philippine_resident_foreign'));
+  writeTotal(r.femaleStart + 2, sex(0, 'female', 'listed_foreign_resident') + sex(0, 'female', 'unlisted_foreign_resident') + sex(0, 'female', 'unspecified_guest'));
+  writeTotal(r.femaleStart + 3, sex(0, 'female', 'overseas_filipino'));
+  writeTotal(r.femaleStart + 4, sex(0, 'female', 'unlisted_foreign_resident') + sex(0, 'female', 'unspecified_guest'));
+  writeTotal(r.femaleStart + 5, sex(0, 'female', 'philippine_resident_filipino') + sex(0, 'female', 'philippine_resident_foreign') +
                                 sex(0, 'female', 'listed_foreign_resident') + sex(0, 'female', 'unlisted_foreign_resident') +
                                 sex(0, 'female', 'overseas_filipino') + sex(0, 'female', 'unspecified_guest'));
 
@@ -893,8 +911,8 @@ function _buildCountrySummarySheet(sheet, md, totalRoomsAll, month, year, daysIn
   sheet.getCell(`B${r.otherCountries}`).value = othersAndUnspecifiedTotal;
 
   // TOTAL FOREIGN RESIDENTS
-  // Row 142 "TOTAL NON-PHILIPPINE RESIDENTS" (Listed countries only).
-  sheet.getCell(`B${r.totalForeign}`).value = res('listed_foreign_resident');
+  // Row 142 "TOTAL NON-PHILIPPINE RESIDENTS" (Listed + Unlisted + Unspecified)
+  sheet.getCell(`B${r.totalForeign}`).value = res('listed_foreign_resident') + res('unlisted_foreign_resident') + res('unspecified_guest');
 
   sheet.getCell(`B${r.unspecified}`).value = othersAndUnspecifiedTotal;
   sheet.getCell(`B${r.overseasFilipino}`).value = res('overseas_filipino');
@@ -908,6 +926,11 @@ function _buildCountrySummarySheet(sheet, md, totalRoomsAll, month, year, daysIn
     res('unspecified_guest') +
     res('overseas_filipino');
   sheet.getCell(`B${r.grandTotal}`).value = grandTotal;
+
+  // ── Summary Rows (After Grand Total) ────────────────────────────────────────
+  sheet.getCell(`B${r.summaryPhTotal}`).value = res('philippine_resident_filipino') + res('philippine_resident_foreign');
+  sheet.getCell(`B${r.summaryForeignTotal}`).value = res('listed_foreign_resident') + res('unlisted_foreign_resident') + res('unspecified_guest');
+  sheet.getCell(`B${r.summaryOverseasTotal}`).value = res('overseas_filipino');
 
   // ── Rooms & nights ──────────────────────────────────────────────────────────
   const totalRoomsOcc  = Object.values(md.roomsOccupied).reduce((a, b) => a + b, 0);
@@ -927,12 +950,14 @@ function _buildCountrySummarySheet(sheet, md, totalRoomsAll, month, year, daysIn
   // ── Sex breakdown ────────────────────────────────────────────────────────────
   // FIX: corrected offsets (+0 to +4) to ensure data aligns with labels in template
   const setSexValues = (rowStart, gender) => {
-    sheet.getCell(`B${rowStart}`).value = sex(gender, 'philippine_resident_filipino') + sex(gender, 'philippine_resident_foreign');
-    sheet.getCell(`B${rowStart + 1}`).value = sex(gender, 'listed_foreign_resident');
-    sheet.getCell(`B${rowStart + 2}`).value = sex(gender, 'overseas_filipino');
-    sheet.getCell(`B${rowStart + 3}`).value = sex(gender, 'unlisted_foreign_resident') + sex(gender, 'unspecified_guest');
+    sheet.getCell(`B${rowStart + 1}`).value = sex(gender, 'philippine_resident_filipino') + sex(gender, 'philippine_resident_foreign');
+    // b. Non-Philippine/Foreign Residents (including unspecified)
+    sheet.getCell(`B${rowStart + 2}`).value = sex(gender, 'listed_foreign_resident') + sex(gender, 'unlisted_foreign_resident') + sex(gender, 'unspecified_guest');
+    sheet.getCell(`B${rowStart + 3}`).value = sex(gender, 'overseas_filipino');
+    // d. Others/Unspecified Guest
+    sheet.getCell(`B${rowStart + 4}`).value = sex(gender, 'unlisted_foreign_resident') + sex(gender, 'unspecified_guest');
     // TOTAL per sex
-    sheet.getCell(`B${rowStart + 4}`).value = 
+    sheet.getCell(`B${rowStart + 5}`).value = 
       sex(gender, 'philippine_resident_filipino') +
       sex(gender, 'philippine_resident_foreign') +
       sex(gender, 'listed_foreign_resident') +
@@ -1004,10 +1029,11 @@ function _buildMonthlySummarySheet(sheet, allMonths, totalRoomsAll, year, adminN
   });
 
   // TOTAL FOREIGN RESIDENTS
-  // Row 142 "TOTAL NON-PHILIPPINE RESIDENTS" (Listed countries only).
+  // Row 142 "TOTAL NON-PHILIPPINE RESIDENTS" (Listed + Unlisted + Unspecified)
   setMonthValues(r.totalForeign, m => {
     const md = mdFor(m);
-    return (md.residentsByDay[0]?.['listed_foreign_resident'] || 0);
+    const res = md.residentsByDay[0] || {};
+    return (res['listed_foreign_resident'] || 0) + (res['unlisted_foreign_resident'] || 0) + (res['unspecified_guest'] || 0);
   });
 
   setMonthValues(r.unspecified, m => {
@@ -1026,6 +1052,14 @@ function _buildMonthlySummarySheet(sheet, allMonths, totalRoomsAll, year, adminN
            (md.unspecified_guest || 0) +
            (md.overseas_filipino || 0);
   });
+
+  // ── Summary Rows (After Grand Total) ────────────────────────────────────────
+  setMonthValues(r.summaryPhTotal, m => mRes(m, 'philippine_resident_filipino') + mRes(m, 'philippine_resident_foreign'));
+  setMonthValues(r.summaryForeignTotal, m => {
+    const res = mdFor(m).residentsByDay[0] || {};
+    return (res['listed_foreign_resident'] || 0) + (res['unlisted_foreign_resident'] || 0) + (res['unspecified_guest'] || 0);
+  });
+  setMonthValues(r.summaryOverseasTotal, m => mRes(m, 'overseas_filipino'));
 
   // ── Rooms & nights ──────────────────────────────────────────────────────────
   setMonthValues(r.roomsOccupied, m => Object.values(mdFor(m).roomsOccupied).reduce((a, b) => a + b, 0));
@@ -1072,12 +1106,14 @@ function _buildMonthlySummarySheet(sheet, allMonths, totalRoomsAll, year, adminN
   // ── Sex breakdown ────────────────────────────────────────────────────────────
   // FIX: corrected offsets (+0 to +4) to ensure data aligns with labels in template
   const setMonthlySexValues = (rowStart, gender) => {
-    setMonthValues(rowStart, m => mSex(m, gender, 'philippine_resident_filipino') + mSex(m, gender, 'philippine_resident_foreign'));
-    setMonthValues(rowStart + 1, m => mSex(m, gender, 'listed_foreign_resident'));
-    setMonthValues(rowStart + 2, m => mSex(m, gender, 'overseas_filipino'));
-    setMonthValues(rowStart + 3, m => mSex(m, gender, 'unlisted_foreign_resident') + mSex(m, gender, 'unspecified_guest'));
+    setMonthValues(rowStart + 1, m => mSex(m, gender, 'philippine_resident_filipino') + mSex(m, gender, 'philippine_resident_foreign'));
+    // b. Non-Philippine/Foreign Residents (including unspecified)
+    setMonthValues(rowStart + 2, m => mSex(m, gender, 'listed_foreign_resident') + mSex(m, gender, 'unlisted_foreign_resident') + mSex(m, gender, 'unspecified_guest'));
+    setMonthValues(rowStart + 3, m => mSex(m, gender, 'overseas_filipino'));
+    // d. Others/Unspecified Guest
+    setMonthValues(rowStart + 4, m => mSex(m, gender, 'unlisted_foreign_resident') + mSex(m, gender, 'unspecified_guest'));
     // TOTAL per sex
-    setMonthValues(rowStart + 4, m => {
+    setMonthValues(rowStart + 5, m => {
       return mSex(m, gender, 'philippine_resident_filipino') +
              mSex(m, gender, 'philippine_resident_foreign') +
              mSex(m, gender, 'listed_foreign_resident') +
