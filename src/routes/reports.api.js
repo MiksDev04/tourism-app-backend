@@ -932,10 +932,15 @@ function _buildMonthlySummarySheet(sheet, allMonths, totalRoomsAll, year, adminN
   sheet.getCell('A23').value = `Province: ${province || ''}`;
 
   // Sets values for months 1-12 into columns B-M (col index 2-13).
+  // Also calculates the total for the year and writes to Column N (14).
   const setMonthValues = (rowNum, fn) => {
+    let yearTotal = 0;
     for (let m = 1; m <= 12; m++) {
-      sheet.getCell(rowNum, m + 1).value = fn(m) ?? 0;
+      const val = fn(m) ?? 0;
+      sheet.getCell(rowNum, m + 1).value = val;
+      if (typeof val === 'number') yearTotal += val;
     }
+    sheet.getCell(rowNum, 14).value = yearTotal;
   };
 
   const mdFor = m => allMonths.find(x => x.month === m) || {
@@ -987,26 +992,38 @@ function _buildMonthlySummarySheet(sheet, allMonths, totalRoomsAll, year, adminN
   setMonthValues(r.guestNights, m => mdFor(m).guestNights);
 
   // ── Computed metrics ─────────────────────────────────────────────────────────
-  setMonthValues(r.occupancyRate, m => {
+  for (let m = 1; m <= 12; m++) {
     const daysInM    = new Date(year, m, 0).getDate();
     const totalAvail = totalRoomsAll * daysInM;
     const totalOcc   = Object.values(mdFor(m).roomsOccupied).reduce((a, b) => a + b, 0);
-    return totalAvail > 0
+    sheet.getCell(r.occupancyRate, m + 1).value = totalAvail > 0
       ? parseFloat((totalOcc / totalAvail * 100).toFixed(2))
       : 0;
-  });
-  setMonthValues(r.alos, m => {
-    const monthMd    = mdFor(m);
+
     const grandTotal =
       mRes(m, 'philippine_resident_filipino') +
       mRes(m, 'philippine_resident_foreign') +
       mRes(m, 'foreign_resident') +
       mRes(m, 'unspecified_guest') +
       mRes(m, 'overseas_filipino');
-    return grandTotal > 0
-      ? parseFloat((monthMd.guestNights / grandTotal).toFixed(2))
+    sheet.getCell(r.alos, m + 1).value = grandTotal > 0
+      ? parseFloat((mdFor(m).guestNights / grandTotal).toFixed(2))
       : 0;
-  });
+  }
+
+  // Yearly totals for metrics (Column N / 14)
+  const yrOccTotal = allMonths.reduce((sum, m) => sum + Object.values(m.roomsOccupied).reduce((a, b) => a + b, 0), 0);
+  const yrAvailTotal = [1,2,3,4,5,6,7,8,9,10,11,12].reduce((sum, m) => sum + totalRoomsAll * new Date(year, m, 0).getDate(), 0);
+  sheet.getCell(r.occupancyRate, 14).value = yrAvailTotal > 0 ? parseFloat((yrOccTotal / yrAvailTotal * 100).toFixed(2)) : 0;
+
+  const yrArrivals = allMonths.reduce((sum, m) => {
+    const r0 = m.residentsByDay[0] || {};
+    return sum + (r0.philippine_resident_filipino || 0) + (r0.philippine_resident_foreign || 0) +
+           (r0.foreign_resident || 0) + (r0.unspecified_guest || 0) + (r0.overseas_filipino || 0);
+  }, 0);
+  const yrNights = allMonths.reduce((sum, m) => sum + m.guestNights, 0);
+  sheet.getCell(r.alos, 14).value = yrArrivals > 0 ? parseFloat((yrNights / yrArrivals).toFixed(2)) : 0;
+
 
   // ── Sex breakdown ────────────────────────────────────────────────────────────
   const setMonthlySexValues = (rowStart, gender) => {
@@ -1173,10 +1190,12 @@ async function _generatePdfFromWorkbook(workbook, pdfPath, month, year) {
              .fontSize(fontSize);
 
           const align = cell.alignment?.horizontal || 'left';
+          const pdfAlign = (align === 'center') ? 'center' : ((colNumber > 1 || align === 'right') ? 'right' : 'left');
+
           doc.text(text, currentX + 2, currentY + 2, {
             width:    boxWidth  - 4,
             height:   boxHeight - 4,
-            align:    align === 'center' ? 'center' : (align === 'right' ? 'right' : 'left'),
+            align:    pdfAlign,
             ellipsis: true,
           });
         }
