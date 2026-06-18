@@ -214,31 +214,8 @@ function _otherCountriesTotal(countryByDay, dayKey) {
 // We try every known path and wipe unconditionally.
 function _purgeOrphanedDefinedNames(workbook) {
   try {
-    const dn = workbook._definedNames ?? workbook.definedNames;
-    if (!dn) return;
-
-    // ── Path A: ExcelJS 4.x — _defined is { [name]: { [sheetName]: addr } } ─
-    if (typeof dn._defined === 'object' && dn._defined !== null) {
-      dn._defined = {};
-      return;
-    }
-
-    // ── Path B: model array (ExcelJS 3.x or rebuilt 4.x) ────────────────────
-    if (Array.isArray(dn.model)) {
-      dn.model = [];
-      return;
-    }
-
-    // ── Path C: Map or other iterable store ─────────────────────────────────
-    for (const prop of ['_map', '_names', '_namedRanges']) {
-      const store = dn[prop];
-      if (!store) continue;
-      if (typeof store.clear === 'function') { store.clear(); return; }
-      if (typeof store === 'object') {
-        for (const k of Object.keys(store)) delete store[k];
-        return;
-      }
-    }
+    const dn = workbook.definedNames;
+    if (dn) dn.model = [];
   } catch (err) {
     console.warn('[report] Named-range cleanup skipped:', err.message);
   }
@@ -341,14 +318,6 @@ router.post('/reports/generate', adminGuard, async (req, res, next) => {
       _buildMonthlySummarySheet(sheet, allTwelveMonthsMerged, totalRoomsAll, year, adminName, city, province);
     }
 
-    // ── Clear print areas on template sheets before removing them.
-    //    This signals ExcelJS to drop the _xlnm.Print_Area entry for each
-    //    template sheet — though _purgeOrphanedDefinedNames below is the
-    //    authoritative cleanup that handles whatever ExcelJS misses.
-    [templateSheet, summarySheetTemplate, monthlySheetTemplate].forEach(ws => {
-      if (ws.pageSetup) ws.pageSetup.printArea = null;
-    });
-
     // Remove template sheets from the output workbook
     workbook.removeWorksheet(templateSheet.id);
     workbook.removeWorksheet(summarySheetTemplate.id);
@@ -358,6 +327,19 @@ router.post('/reports/generate', adminGuard, async (req, res, next) => {
     //    output workbook.xml.  Without this Excel shows the
     //    "Removed Records: Named range" recovery dialog on every open.
     _purgeOrphanedDefinedNames(workbook);
+
+    // ── FIX: Strip print-area / print-titles from every remaining sheet.
+    //    WorkbookXform.prepare() re-creates _xlnm.Print_Area and _xlnm.Print_Titles
+    //    entries from sheet.pageSetup during serialisation, and those entries can
+    //    carry stale localSheetId values or reference removed sheets.  By clearing
+    //    them here we guarantee that prepare() has nothing to re-add.
+    workbook.eachSheet(ws => {
+      if (ws.pageSetup) {
+        ws.pageSetup.printArea = null;
+        delete ws.pageSetup.printTitlesRow;
+        delete ws.pageSetup.printTitlesColumn;
+      }
+    });
 
     const reportId    = uuidv4();
     const timestamp   = Date.now();
@@ -690,7 +672,7 @@ function _buildDailySheet(sheet, biz, md, month, year, daysInMonth, adminName) {
   // Days beyond the month end (e.g. day 31 in a 30-day month) are left null.
   const setDayValues = (rowNum, fn) => {
     for (let d = 1; d <= 31; d++) {
-      sheet.getCell(rowNum, d + 1).value = d > daysInMonth ? null : (fn(d) ?? 0);j
+      sheet.getCell(rowNum, d + 1).value = d > daysInMonth ? null : (fn(d) ?? 0);
     }
   };
 
