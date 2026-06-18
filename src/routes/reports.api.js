@@ -226,7 +226,17 @@ function _purgeOrphanedDefinedNames(workbook) {
 router.get('/reports', adminGuard, async (req, res, next) => {
   try {
     const [rows] = await db.pool.execute(
-      'SELECT r.*, u.full_name as generated_by_name FROM reports r LEFT JOIN users u ON r.generated_by = u.id ORDER BY r.generated_at DESC'
+      `SELECT r.id, r.batch_id, r.business_id, r.file_url,
+              rb.report_type, rb.period_month, rb.period_year,
+              rb.generated_at, rb.generated_by,
+              rb.include_sheet_establishment, rb.include_sheet_country_sum, rb.include_sheet_monthly,
+              u.full_name AS generated_by_name,
+              b.business_name
+       FROM reports r
+       JOIN report_batches rb ON rb.id = r.batch_id
+       JOIN businesses     b  ON b.id  = r.business_id
+       LEFT JOIN users     u  ON rb.generated_by = u.id
+       ORDER BY rb.generated_at DESC`
     );
     res.json(rows);
   } catch (err) {
@@ -238,16 +248,18 @@ router.post('/reports/generate', adminGuard, async (req, res, next) => {
   try {
     const { month, year, sheetOptions } = req.body;
 
-    const [existing] = await db.pool.execute(
-      'SELECT id FROM reports WHERE report_type = "DAE-1B" AND period_month = ? AND period_year = ? LIMIT 1',
+    // ── Check for existing batch ─────────────────────────────────────────────
+    const [existingBatch] = await db.pool.execute(
+      'SELECT id FROM report_batches WHERE period_month = ? AND period_year = ? LIMIT 1',
       [month, year]
     );
-    if (existing.length > 0) {
+    if (existingBatch.length > 0) {
       return res.status(400).json({
-        message: `A DAE-1B report for ${kMonthNames[month]} ${year} already exists.`
+        message: `A DAE-1B report batch for ${kMonthNames[month]} ${year} already exists.`
       });
     }
 
+    // ── Fetch approved businesses ────────────────────────────────────────────
     const [businesses] = await db.pool.execute(
       `SELECT id, business_name, business_line, region, city_municipality, province, total_rooms,
               owner_first_name, owner_last_name, owner_middle_name
@@ -260,113 +272,135 @@ router.post('/reports/generate', adminGuard, async (req, res, next) => {
 
     const [userRows] = await db.pool.execute('SELECT full_name, role FROM users WHERE id = ?', [req.user.id]);
     const adminName = userRows[0]?.full_name || 'System Admin';
-    const adminRole = userRows[0]?.role || 'Admin';
 
-    const selectedMonthPerBiz = await Promise.all(
-      businesses.map(b => _fetchMonthData(b.id, month, year))
-    );
-
-    let allTwelveMonthsMerged = null;
-    if (sheetOptions.includeMonthlySummarySheet) {
-      allTwelveMonthsMerged = [];
-      for (let m = 1; m <= 12; m++) {
-        const perBiz = await Promise.all(
-          businesses.map(b => _fetchMonthData(b.id, m, year, true))
-        );
-        allTwelveMonthsMerged.push(_mergeMonthData(m, perBiz));
-      }
-    }
-
-    const totalRoomsAll = businesses.reduce((sum, b) => sum + (b.total_rooms || 0), 0);
-
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.readFile(TEMPLATE_PATH);
-
-    const templateSheet        = workbook.getWorksheet('Name of Establishment');
-    const summarySheetTemplate = workbook.getWorksheet('AE DAE-1B by Country (Sum) ');
-    const monthlySheetTemplate = workbook.getWorksheet('AE DAE-1B (Monthly)');
-
-    if (!templateSheet || !summarySheetTemplate || !monthlySheetTemplate) {
-      throw new Error('Template worksheets not found. Check sheet names in template file.');
-    }
-
-    const daysInMonth = new Date(year, month, 0).getDate();
-    const firstBiz = businesses[0];
-    const city = firstBiz?.city_municipality || '';
-    const province = firstBiz?.province || '';
-
-    if (sheetOptions.includeDailySheet) {
-      for (let i = 0; i < businesses.length; i++) {
-        const bizName = businesses[i].business_name.substring(0, 31).replace(/[\\\?\*\/\[\]]/g, '');
-        const sheet = workbook.addWorksheet(bizName);
-        _copySheetProperties(templateSheet, sheet);
-        _buildDailySheet(sheet, businesses[i], selectedMonthPerBiz[i], month, year, daysInMonth, adminName);
-      }
-    }
-
-    const mergedSelectedMonth = _mergeMonthData(month, selectedMonthPerBiz);
-
-    if (sheetOptions.includeCountrySumSheet) {
-      const sheet = workbook.addWorksheet('AE DAE-1B by Country (Sum)');
-      _copySheetProperties(summarySheetTemplate, sheet);
-      _buildCountrySummarySheet(sheet, mergedSelectedMonth, totalRoomsAll, month, year, daysInMonth, adminName, city, province);
-    }
-
-    if (sheetOptions.includeMonthlySummarySheet && allTwelveMonthsMerged) {
-      const sheet = workbook.addWorksheet('AE DAE-1B (Monthly) Summary');
-      _copySheetProperties(monthlySheetTemplate, sheet);
-      _buildMonthlySummarySheet(sheet, allTwelveMonthsMerged, totalRoomsAll, year, adminName, city, province);
-    }
-
-    // Remove template sheets from the output workbook
-    workbook.removeWorksheet(templateSheet.id);
-    workbook.removeWorksheet(summarySheetTemplate.id);
-    workbook.removeWorksheet(monthlySheetTemplate.id);
-
-    // ── FIX: Wipe ALL named ranges so no orphaned references survive into the
-    //    output workbook.xml.  Without this Excel shows the
-    //    "Removed Records: Named range" recovery dialog on every open.
-    _purgeOrphanedDefinedNames(workbook);
-
-    // ── FIX: Strip print-area / print-titles from every remaining sheet.
-    //    WorkbookXform.prepare() re-creates _xlnm.Print_Area and _xlnm.Print_Titles
-    //    entries from sheet.pageSetup during serialisation, and those entries can
-    //    carry stale localSheetId values or reference removed sheets.  By clearing
-    //    them here we guarantee that prepare() has nothing to re-add.
-    workbook.eachSheet(ws => {
-      if (ws.pageSetup) {
-        ws.pageSetup.printArea = null;
-        delete ws.pageSetup.printTitlesRow;
-        delete ws.pageSetup.printTitlesColumn;
-      }
-    });
-
-    const reportId    = uuidv4();
-    const timestamp   = Date.now();
-    const excelFileName = `DAE1B_ALL_${year}_${String(month).padStart(2, '0')}_${timestamp}.xlsx`;
-    const excelPath   = path.join(UPLOADS_DIR, excelFileName);
-
-    await workbook.xlsx.writeFile(excelPath);
-
-    const pdfFileName = excelFileName.replace('.xlsx', '.pdf');
-    const pdfPath     = path.join(UPLOADS_DIR, pdfFileName);
-    await _generatePdfFromWorkbook(workbook, pdfPath, month, year);
-
-    await _archiveMonthRecords(month, year);
-
-    const fileUrl = `/uploads/reports/${excelFileName}`;
-    const pdfUrl  = `/uploads/reports/${pdfFileName}`;
+    // ── Create batch ─────────────────────────────────────────────────────────
+    const batchId = uuidv4();
     await db.pool.execute(
-      `INSERT INTO reports (id, report_type, period_month, period_year, file_url, generated_by,
-        include_sheet_establishment, include_sheet_country_sum, include_sheet_monthly)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO report_batches
+         (id, report_type, period_month, period_year, generated_by,
+          include_sheet_establishment, include_sheet_country_sum, include_sheet_monthly)
+       VALUES (?, 'DAE-1B', ?, ?, ?, ?, ?, ?)`,
       [
-        reportId, 'DAE-1B', month, year, fileUrl, req.user.id,
+        batchId, month, year, req.user.id,
         sheetOptions.includeDailySheet, sheetOptions.includeCountrySumSheet, sheetOptions.includeMonthlySummarySheet
       ]
     );
 
-    res.json({ message: 'Report generated successfully', fileUrl, pdfUrl });
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const timestamp = Date.now();
+    const writtenFiles = [];
+    const reportResults = [];
+
+    try {
+      // ── Process each business sequentially ─────────────────────────────────
+      for (const biz of businesses) {
+        // Fetch this business's data for the selected month
+        const bizData = await _fetchMonthData(biz.id, month, year);
+
+        // Fetch 12 months of data if monthly summary needed
+        let bizAllMonths = null;
+        if (sheetOptions.includeMonthlySummarySheet) {
+          bizAllMonths = [];
+          for (let m = 1; m <= 12; m++) {
+            const md = await _fetchMonthData(biz.id, m, year, true);
+            bizAllMonths.push(md);
+          }
+        }
+
+        // ── Create workbook for this business ────────────────────────────────
+        const wb = new ExcelJS.Workbook();
+        await wb.xlsx.readFile(TEMPLATE_PATH);
+
+        const dailyTpl   = wb.getWorksheet('Name of Establishment');
+        const sumTpl     = wb.getWorksheet('AE DAE-1B by Country (Sum) ');
+        const monthTpl   = wb.getWorksheet('AE DAE-1B (Monthly)');
+
+        if (!dailyTpl || !sumTpl || !monthTpl) {
+          throw new Error('Template worksheets not found. Check sheet names in template file.');
+        }
+
+        // Build daily sheet
+        if (sheetOptions.includeDailySheet) {
+          const sheetName = biz.business_name.substring(0, 31).replace(/[\\\?\*\/\[\]]/g, '');
+          const sheet = wb.addWorksheet(sheetName);
+          _copySheetProperties(dailyTpl, sheet);
+          _buildDailySheet(sheet, biz, bizData, month, year, daysInMonth, adminName);
+        }
+
+        // Build country summary sheet (scoped to this business)
+        if (sheetOptions.includeCountrySumSheet) {
+          const sheet = wb.addWorksheet('AE DAE-1B by Country (Sum)');
+          _copySheetProperties(sumTpl, sheet);
+          _buildCountrySummarySheet(sheet, bizData, biz.total_rooms, month, year, daysInMonth, adminName, biz.city_municipality || '', biz.province || '', biz.business_name);
+        }
+
+        // Build monthly summary sheet (scoped to this business)
+        if (sheetOptions.includeMonthlySummarySheet && bizAllMonths) {
+          const sheet = wb.addWorksheet('AE DAE-1B (Monthly) Summary');
+          _copySheetProperties(monthTpl, sheet);
+          _buildMonthlySummarySheet(sheet, bizAllMonths, biz.total_rooms, year, adminName, biz.city_municipality || '', biz.province || '', biz.business_name);
+        }
+
+        // Remove template sheets
+        wb.removeWorksheet(dailyTpl.id);
+        wb.removeWorksheet(sumTpl.id);
+        wb.removeWorksheet(monthTpl.id);
+
+        _purgeOrphanedDefinedNames(wb);
+        wb.eachSheet(ws => {
+          if (ws.pageSetup) {
+            ws.pageSetup.printArea = null;
+            delete ws.pageSetup.printTitlesRow;
+            delete ws.pageSetup.printTitlesColumn;
+          }
+        });
+
+        // Write Excel file
+        const bizSlug = biz.business_name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '').substring(0, 30);
+        const excelFileName = `DAE1B_${bizSlug}_${year}_${String(month).padStart(2, '0')}_${timestamp}.xlsx`;
+        const excelPath = path.join(UPLOADS_DIR, excelFileName);
+        await wb.xlsx.writeFile(excelPath);
+        writtenFiles.push(excelPath);
+
+        // Generate PDF
+        const pdfFileName = excelFileName.replace('.xlsx', '.pdf');
+        const pdfPath = path.join(UPLOADS_DIR, pdfFileName);
+        await _generatePdfFromWorkbook(wb, pdfPath, month, year);
+        writtenFiles.push(pdfPath);
+
+        // Insert report row
+        const reportId = uuidv4();
+        const fileUrl = `/uploads/reports/${excelFileName}`;
+        await db.pool.execute(
+          `INSERT INTO reports (id, batch_id, business_id, file_url) VALUES (?, ?, ?, ?)`,
+          [reportId, batchId, biz.id, fileUrl]
+        );
+
+        reportResults.push({ reportId, businessId: biz.id, businessName: biz.business_name, fileUrl });
+      }
+
+      // ── Archive month records once ────────────────────────────────────────
+      await _archiveMonthRecords(month, year);
+
+      res.json({
+        message: 'Reports generated successfully',
+        batchId,
+        reportCount: reportResults.length,
+        reports: reportResults,
+      });
+    } catch (innerErr) {
+      // ── Rollback: delete batch and all written files ──────────────────────
+      console.error('Report generation failed — rolling back:', innerErr.message);
+      try {
+        await db.pool.execute('DELETE FROM report_batches WHERE id = ?', [batchId]);
+      } catch (dbErr) {
+        console.error('Rollback DB error:', dbErr.message);
+      }
+      for (const f of writtenFiles) {
+        try { fs.unlinkSync(f); } catch (e) { /* best effort */ }
+      }
+      throw innerErr;
+    }
   } catch (err) {
     console.error('Report Generation Error:', err);
     next(err);
@@ -858,11 +892,11 @@ function _buildDailySheet(sheet, biz, md, month, year, daysInMonth, adminName) {
 // ==============================================================================================
 
 
-function _buildCountrySummarySheet(sheet, md, totalRoomsAll, month, year, daysInMonth, adminName, city, province) {
+function _buildCountrySummarySheet(sheet, md, totalRoomsAll, month, year, daysInMonth, adminName, city, province, businessName) {
   const r = kRows.sum;
 
   sheet.getCell('B3').value = 'Region: __4-A';
-  sheet.getCell('A4').value = 'All Accommodation Establishments — Combined';
+  sheet.getCell('A4').value = businessName;
   sheet.getCell('A5').value = `${kMonthNames[month]}, ${year}`;
 
   sheet.getCell('A22').value = `City/Municipality: ${city || ''}`;
@@ -956,11 +990,11 @@ function _buildCountrySummarySheet(sheet, md, totalRoomsAll, month, year, daysIn
 // ==============================================================================================
 
 
-function _buildMonthlySummarySheet(sheet, allMonths, totalRoomsAll, year, adminName, city, province) {
+function _buildMonthlySummarySheet(sheet, allMonths, totalRoomsAll, year, adminName, city, province, businessName) {
   const r = kRows.sum;
 
   sheet.getCell('B3').value = 'Region: __4-A';
-  sheet.getCell('A4').value = 'All Accommodation Establishments — Combined';
+  sheet.getCell('A4').value = businessName;
   sheet.getCell('A5').value = `${year}`;
 
   sheet.getCell('A22').value = `City/Municipality: ${city || ''}`;
