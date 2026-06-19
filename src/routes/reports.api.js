@@ -227,11 +227,10 @@ router.get('/reports', adminGuard, async (req, res, next) => {
   try {
     const [rows] = await db.pool.execute(
       `SELECT r.id, r.batch_id, r.business_id, r.file_url,
-              rb.report_type, rb.period_month, rb.period_year,
-              rb.generated_at, rb.generated_by,
-              rb.include_sheet_establishment, rb.include_sheet_country_sum, rb.include_sheet_monthly,
-              u.full_name AS generated_by_name,
-              b.business_name
+               rb.report_scope, rb.period_month, rb.period_year,
+               rb.generated_at, rb.generated_by,
+               u.full_name AS generated_by_name,
+               b.business_name
        FROM reports r
        JOIN report_batches rb ON rb.id = r.batch_id
        JOIN businesses     b  ON b.id  = r.business_id
@@ -246,16 +245,24 @@ router.get('/reports', adminGuard, async (req, res, next) => {
 
 router.post('/reports/generate', adminGuard, async (req, res, next) => {
   try {
-    const { month, year, sheetOptions } = req.body;
+    const { month, year, scope } = req.body;
+
+    if (!['monthly', 'annual'].includes(scope)) {
+      return res.status(400).json({ message: 'scope must be "monthly" or "annual"' });
+    }
+
+    const effectiveMonth = scope === 'annual' ? 12 : month;
 
     // ── Check for existing batch ─────────────────────────────────────────────
-    const [existingBatch] = await db.pool.execute(
-      'SELECT id FROM report_batches WHERE period_month = ? AND period_year = ? LIMIT 1',
-      [month, year]
-    );
+    const dupQuery = scope === 'annual'
+      ? 'SELECT id FROM report_batches WHERE report_scope = ? AND period_year = ? LIMIT 1'
+      : 'SELECT id FROM report_batches WHERE report_scope = ? AND period_month = ? AND period_year = ? LIMIT 1';
+    const dupParams = scope === 'annual' ? [scope, year] : [scope, effectiveMonth, year];
+    const [existingBatch] = await db.pool.execute(dupQuery, dupParams);
     if (existingBatch.length > 0) {
+      const label = scope === 'annual' ? String(year) : `${kMonthNames[month]} ${year}`;
       return res.status(400).json({
-        message: `A DAE-1B report batch for ${kMonthNames[month]} ${year} already exists.`
+        message: `A ${scope} report batch for ${label} already exists.`
       });
     }
 
@@ -273,17 +280,14 @@ router.post('/reports/generate', adminGuard, async (req, res, next) => {
     const [userRows] = await db.pool.execute('SELECT full_name, role FROM users WHERE id = ?', [req.user.id]);
     const adminName = userRows[0]?.full_name || 'System Admin';
 
-    // ── Create batch ─────────────────────────────────────────────────────────
+    // ── Transaction: create batch + insert all reports atomically ────────────
+    await db.pool.query('START TRANSACTION');
+
     const batchId = uuidv4();
     await db.pool.execute(
-      `INSERT INTO report_batches
-         (id, report_type, period_month, period_year, generated_by,
-          include_sheet_establishment, include_sheet_country_sum, include_sheet_monthly)
-       VALUES (?, 'DAE-1B', ?, ?, ?, ?, ?, ?)`,
-      [
-        batchId, month, year, req.user.id,
-        sheetOptions.includeDailySheet, sheetOptions.includeCountrySumSheet, sheetOptions.includeMonthlySummarySheet
-      ]
+      `INSERT INTO report_batches (id, report_scope, period_month, period_year, generated_by)
+       VALUES (?, ?, ?, ?, ?)`,
+      [batchId, scope, effectiveMonth, year, req.user.id]
     );
 
     const daysInMonth = new Date(year, month, 0).getDate();
@@ -291,21 +295,27 @@ router.post('/reports/generate', adminGuard, async (req, res, next) => {
     const writtenFiles = [];
     const reportResults = [];
 
+    const includeDaily       = scope === 'monthly';
+    const includeCountrySum  = scope === 'monthly';
+    const includeMonthlySum  = scope === 'annual';
+
     try {
       // ── Process each business sequentially ─────────────────────────────────
       for (const biz of businesses) {
-        // Fetch this business's data for the selected month
-        const bizData = await _fetchMonthData(biz.id, month, year);
-
-        // Fetch 12 months of data if monthly summary needed
+        // Fetch 12 months of data if annual summary needed
         let bizAllMonths = null;
-        if (sheetOptions.includeMonthlySummarySheet) {
+        if (includeMonthlySum) {
           bizAllMonths = [];
           for (let m = 1; m <= 12; m++) {
             const md = await _fetchMonthData(biz.id, m, year, true);
             bizAllMonths.push(md);
           }
         }
+
+        // Fetch single-month data for monthly scope (also used for daily/sum sheets)
+        const bizData = includeDaily || includeCountrySum
+          ? await _fetchMonthData(biz.id, month, year)
+          : null;
 
         // ── Create workbook for this business ────────────────────────────────
         const wb = new ExcelJS.Workbook();
@@ -319,23 +329,23 @@ router.post('/reports/generate', adminGuard, async (req, res, next) => {
           throw new Error('Template worksheets not found. Check sheet names in template file.');
         }
 
-        // Build daily sheet
-        if (sheetOptions.includeDailySheet) {
+        // Build daily sheet (monthly scope only)
+        if (includeDaily && bizData) {
           const sheetName = biz.business_name.substring(0, 31).replace(/[\\\?\*\/\[\]]/g, '');
           const sheet = wb.addWorksheet(sheetName);
           _copySheetProperties(dailyTpl, sheet);
           _buildDailySheet(sheet, biz, bizData, month, year, daysInMonth, adminName);
         }
 
-        // Build country summary sheet (scoped to this business)
-        if (sheetOptions.includeCountrySumSheet) {
+        // Build country summary sheet (monthly scope only)
+        if (includeCountrySum && bizData) {
           const sheet = wb.addWorksheet('AE DAE-1B by Country (Sum)');
           _copySheetProperties(sumTpl, sheet);
           _buildCountrySummarySheet(sheet, bizData, biz.total_rooms, month, year, daysInMonth, adminName, biz.city_municipality || '', biz.province || '', biz.business_name);
         }
 
-        // Build monthly summary sheet (scoped to this business)
-        if (sheetOptions.includeMonthlySummarySheet && bizAllMonths) {
+        // Build annual monthly-summary sheet (annual scope only)
+        if (includeMonthlySum && bizAllMonths) {
           const sheet = wb.addWorksheet('AE DAE-1B (Monthly) Summary');
           _copySheetProperties(monthTpl, sheet);
           _buildMonthlySummarySheet(sheet, bizAllMonths, biz.total_rooms, year, adminName, biz.city_municipality || '', biz.province || '', biz.business_name);
@@ -357,7 +367,8 @@ router.post('/reports/generate', adminGuard, async (req, res, next) => {
 
         // Write Excel file
         const bizSlug = biz.business_name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '').substring(0, 30);
-        const excelFileName = `DAE1B_${bizSlug}_${year}_${String(month).padStart(2, '0')}_${timestamp}.xlsx`;
+        const monthLabel = scope === 'annual' ? 'ANNUAL' : String(month).padStart(2, '0');
+        const excelFileName = `DAE1B_${bizSlug}_${year}_${monthLabel}_${timestamp}.xlsx`;
         const excelPath = path.join(UPLOADS_DIR, excelFileName);
         await wb.xlsx.writeFile(excelPath);
         writtenFiles.push(excelPath);
@@ -379,8 +390,13 @@ router.post('/reports/generate', adminGuard, async (req, res, next) => {
         reportResults.push({ reportId, businessId: biz.id, businessName: biz.business_name, fileUrl });
       }
 
-      // ── Archive month records once ────────────────────────────────────────
-      await _archiveMonthRecords(month, year);
+      // ── Commit transaction ───────────────────────────────────────────────
+      await db.pool.query('COMMIT');
+
+      // ── Archive month records (monthly scope only) ─────────────────────────
+      if (scope === 'monthly') {
+        await _archiveMonthRecords(month, year);
+      }
 
       res.json({
         message: 'Reports generated successfully',
@@ -389,10 +405,10 @@ router.post('/reports/generate', adminGuard, async (req, res, next) => {
         reports: reportResults,
       });
     } catch (innerErr) {
-      // ── Rollback: delete batch and all written files ──────────────────────
+      // ── Rollback: roll back transaction and delete all written files ──────
       console.error('Report generation failed — rolling back:', innerErr.message);
       try {
-        await db.pool.execute('DELETE FROM report_batches WHERE id = ?', [batchId]);
+        await db.pool.query('ROLLBACK');
       } catch (dbErr) {
         console.error('Rollback DB error:', dbErr.message);
       }
