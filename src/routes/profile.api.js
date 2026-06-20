@@ -276,7 +276,7 @@ router.get('/confirm-email', async (req, res, next) => {
 
     res.send(simpleHtmlPage(
       'Email Confirmed Successfully',
-      'Your email address has been updated successfully. You can now use your new email to log in.'
+      'Your email address has been updated successfully. Future notifications and account-related communications will be sent to your new email address.'
     ));
   } catch (err) {
     next(err);
