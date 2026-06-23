@@ -5,10 +5,12 @@ import { pool } from './db.js';
  * seedAdmin - Ensures at least one admin account exists in the database.
  * If no user with the 'admin' role is found, a default one is created.
  */
+
+
 export async function seedAdmin() {
   try {
-    // Check for existing admin users
-    const [rows] = await pool.execute('SELECT COUNT(*) as count FROM users WHERE role = "admin"');
+    // Check for existing admin users`
+    const [rows] = await pool.execute(`SELECT COUNT(*) as count FROM users WHERE role = 'admin'`);
     
     if (rows[0].count === 0) {
       console.log('⚠️ No admin account found. Creating a default admin...');
