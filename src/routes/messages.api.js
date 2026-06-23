@@ -288,7 +288,7 @@ router.put('/recipient/:recipientId/read', auth.authenticate, async (req, res, n
   const connection = await db.pool.getConnection();
   try {
     await connection.execute(
-      'UPDATE message_recipients SET is_read = TRUE, status = "read", read_at = NOW() WHERE id = ? AND is_read = FALSE',
+      `UPDATE message_recipients SET is_read = TRUE, status = 'read', read_at = NOW() WHERE id = ? AND is_read = FALSE`,
       [req.params.recipientId]
     );
     res.json({ message: 'Marked as read' });
