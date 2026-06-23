@@ -14,7 +14,7 @@ router.get('/eligible-businesses', auth.authenticate, auth.requireRole('admin'),
   const connection = await db.pool.getConnection();
   try {
     const [rows] = await connection.execute(
-      'SELECT id, business_name, status FROM businesses WHERE status IN ("approved", "warning") AND deleted_at IS NULL ORDER BY business_name ASC'
+      `SELECT id, business_name, status FROM businesses WHERE status IN ('approved', 'warning') AND deleted_at IS NULL ORDER BY business_name ASC`
     );
     res.json(rows);
   } catch (err) {
@@ -32,7 +32,7 @@ router.get('/receiver-name/:businessId', auth.authenticate, auth.requireRole('ad
   const connection = await db.pool.getConnection();
   try {
     const [rows] = await connection.execute(
-      'SELECT business_name FROM businesses WHERE id = ? AND status = "approved" AND deleted_at IS NULL LIMIT 1',
+      "SELECT business_name FROM businesses WHERE id = ? AND status = 'approved' AND deleted_at IS NULL LIMIT 1",
       [req.params.businessId]
     );
     if (rows.length === 0) return res.json(null);
@@ -106,7 +106,7 @@ router.post('/send-all', auth.authenticate, auth.requireRole('admin'), async (re
     }
 
     const [businesses] = await connection.execute(
-      'SELECT id FROM businesses WHERE status IN ("approved", "warning") AND deleted_at IS NULL'
+      "SELECT id FROM businesses WHERE status IN ('approved', 'warning') AND deleted_at IS NULL"
     );
 
     if (businesses.length === 0) {
@@ -131,7 +131,7 @@ router.post('/send-all', auth.authenticate, auth.requireRole('admin'), async (re
       `SELECT u.email 
        FROM businesses b 
        JOIN users u ON b.user_id = u.id 
-       WHERE b.status IN ("approved", "warning") AND b.deleted_at IS NULL AND u.email IS NOT NULL`
+       WHERE b.status IN ('approved', 'warning') AND b.deleted_at IS NULL AND u.email IS NOT NULL`
     );
 
     await connection.commit();
@@ -307,7 +307,7 @@ router.put('/recipient/:recipientId/archive', auth.authenticate, async (req, res
   const connection = await db.pool.getConnection();
   try {
     await connection.execute(
-      'UPDATE message_recipients SET status = "archived" WHERE id = ?',
+      `UPDATE message_recipients SET status = 'archived' WHERE id = ?`,
       [req.params.recipientId]
     );
     res.json({ message: 'Archived' });
