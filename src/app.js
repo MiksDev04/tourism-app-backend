@@ -22,8 +22,18 @@ const app = express();
 
 // ── Middleware ────────────────────────────────────────────────
 app.use(cors({
-  origin: ['https://e-turismo.netlify.app', 'http://localhost:3000'], // your dev origin too
-  credentials: true, // if you're sending cookies/auth headers
+  origin: function (origin, callback) {
+    const allowed = [
+      'https://e-turismo.netlify.app',
+      'http://localhost:3000',
+    ];
+    if (!origin || allowed.includes(origin) || /^http:\/\/localhost:\d+$/.test(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
 }));
 
 app.use(express.json());
