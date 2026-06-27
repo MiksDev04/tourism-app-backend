@@ -584,15 +584,19 @@ async function _fetchMonthData(businessId, month, year, includeArchived = false)
     if (nights > 0) {
       totalGuestNights += nights * guestCount;
       guestNightsPerArrivalDay[day] = (guestNightsPerArrivalDay[day] || 0) + (nights * guestCount);
+    }
 
-      // Spread rooms-occupied and guest-nights across each stay-night
-      for (let n = 0; n < nights; n++) {
-        const stayDate = new Date(checkIn);
-        stayDate.setDate(checkIn.getDate() + n);
-        if (stayDate.getFullYear() === year && (stayDate.getMonth() + 1) === month) {
-          const stayDay = stayDate.getDate();
-          roomsOccupiedByDay[stayDay] = (roomsOccupiedByDay[stayDay] || 0) + rooms;
-          guestNightsByDay[stayDay]   = (guestNightsByDay[stayDay]   || 0) + guestCount;
+    // Spread rooms-occupied across each stay-night (at minimum the check-in day)
+    // so same-day stays (nights === 0) still count their rooms.
+    const spreadDays = Math.max(1, nights);
+    for (let n = 0; n < spreadDays; n++) {
+      const stayDate = new Date(checkIn);
+      stayDate.setDate(checkIn.getDate() + n);
+      if (stayDate.getFullYear() === year && (stayDate.getMonth() + 1) === month) {
+        const stayDay = stayDate.getDate();
+        roomsOccupiedByDay[stayDay] = (roomsOccupiedByDay[stayDay] || 0) + rooms;
+        if (nights > 0) {
+          guestNightsByDay[stayDay] = (guestNightsByDay[stayDay] || 0) + guestCount;
         }
       }
     }
