@@ -39,7 +39,7 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 // ── Health check ──────────────────────────────────────────────
-app.get('/health', (req, res) => res.json({ status: 'ok' }));
+app.get('/health', async (req, res) => await res.json({ status: 'ok' }));
 
 app.use(verifyApiKey); // Protect all subsequent API routes with API Key
 

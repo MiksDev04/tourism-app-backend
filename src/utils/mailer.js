@@ -1,16 +1,28 @@
 import nodemailer from 'nodemailer';
 
-const transporter = nodemailer.createTransport({
-  host:   process.env.MAIL_HOST || 'smtp.gmail.com',
-  port:   parseInt(process.env.MAIL_PORT) || 587,
-  secure: false,
-  auth: {
-    user: process.env.MAIL_USER,
-    pass: process.env.MAIL_PASS,
-  },
-});
+const hasMailConfig = !!(process.env.MAIL_USER && process.env.MAIL_PASS);
+
+const transporter = hasMailConfig
+  ? nodemailer.createTransport({
+      host:   process.env.MAIL_HOST || 'smtp.gmail.com',
+      port:   parseInt(process.env.MAIL_PORT) || 587,
+      secure: false,
+      auth: {
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASS,
+      },
+    })
+  : null;
+
+if (!hasMailConfig) {
+  console.warn('⚠️  Mail credentials (MAIL_USER/MAIL_PASS) not set. Emails will be skipped.');
+}
 
 async function sendOtp(toEmail, otp) {
+  if (!transporter) {
+    console.warn(`Skipping OTP email to ${toEmail}: mailer not configured`);
+    return;
+  }
   await transporter.sendMail({
     from:    `"San Pablo City Tourism Office" <${process.env.MAIL_USER}>`,
     to:      toEmail,
@@ -115,6 +127,10 @@ async function sendOtp(toEmail, otp) {
 }
 
 async function sendSystemMessage(toEmail, subject, content, messageType = 'general') {
+  if (!transporter) {
+    console.warn(`Skipping system message email to ${toEmail}: mailer not configured`);
+    return;
+  }
   const typeLabel = messageType.charAt(0).toUpperCase() + messageType.slice(1);
   
   await transporter.sendMail({
@@ -180,6 +196,10 @@ async function sendSystemMessage(toEmail, subject, content, messageType = 'gener
 }
 
 async function sendEmailConfirmation(toEmail, confirmationUrl) {
+  if (!transporter) {
+    console.warn(`Skipping confirmation email to ${toEmail}: mailer not configured`);
+    return;
+  }
   await transporter.sendMail({
     from:    `"San Pablo City Tourism Office" <${process.env.MAIL_USER}>`,
     to:      toEmail,

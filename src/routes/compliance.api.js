@@ -1,6 +1,8 @@
 import express from 'express';
 import db from '../config/db.js';
 import auth from '../middleware/auth.js';
+import mailer from '../utils/mailer.js';
+import crypto from 'crypto';
 
 const router = express.Router();
 
@@ -65,21 +67,62 @@ router.get('/activity-summary', auth.authenticate, auth.requireRole('admin'), as
  */
 router.put('/business-status/:businessId', auth.authenticate, auth.requireRole('admin'), async (req, res, next) => {
   const connection = await db.pool.getConnection();
+  await connection.beginTransaction();
   try {
-    const { status } = req.body;
+    const { status, reason, messageContent } = req.body;
     const { businessId } = req.params;
 
     if (!['approved', 'warning', 'suspended'].includes(status)) {
       return res.status(400).json({ message: 'Invalid status' });
     }
+    if (!reason || !reason.trim()) {
+      return res.status(400).json({ message: 'Reason is required' });
+    }
+    if (!messageContent || !messageContent.trim()) {
+      return res.status(400).json({ message: 'Message content is required' });
+    }
+
+    const [bizRows] = await connection.execute(
+      `SELECT b.business_name, b.status AS old_status,
+              u.email
+       FROM businesses b
+       JOIN users u ON b.user_id = u.id
+       WHERE b.id = ?`,
+      [businessId]
+    );
+
+    if (bizRows.length === 0) {
+      return res.status(404).json({ message: 'Business not found' });
+    }
+
+    const biz = bizRows[0];
 
     await connection.execute(
       'UPDATE businesses SET status = ? WHERE id = ?',
       [status, businessId]
     );
 
+    const messageId = crypto.randomUUID();
+    await connection.execute(
+      'INSERT INTO messages (id, sender_id, message_type, subject, content, is_broadcast) VALUES (?, ?, ?, ?, ?, ?)',
+      [messageId, req.user.id, 'compliance', 'Business Status Update', messageContent.trim(), false]
+    );
+
+    await connection.execute(
+      'INSERT INTO message_recipients (message_id, business_id) VALUES (?, ?)',
+      [messageId, businessId]
+    );
+
+    await connection.commit();
+
     res.json({ message: 'Business status updated' });
+
+    if (biz.email) {
+      mailer.sendSystemMessage(biz.email, 'Business Status Update', messageContent.trim(), 'compliance')
+        .catch(err => console.error('Failed to send status-change email:', err.message));
+    }
   } catch (err) {
+    await connection.rollback();
     next(err);
   } finally {
     connection.release();
