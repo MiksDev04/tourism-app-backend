@@ -231,6 +231,7 @@ router.post('/send-email-otp', auth.authenticate, async (req, res, next) => {
       console.log(`[MAIL] Identity verification code sent to ${user.email}`);
     } catch (mailErr) {
       console.error('[MAIL ERROR]', mailErr);
+      return res.status(500).json({ message: 'Failed to send verification code. Please try again later.' });
     }
 
     res.json({ message: 'Verification code sent to your email.' });
