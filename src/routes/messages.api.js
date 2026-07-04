@@ -152,27 +152,77 @@ router.post('/send-all', auth.authenticate, auth.requireRole('admin'), async (re
 
 /**
  * GET /api/messages/admin/outbox
- * Admin only: Fetch sent messages.
+ * Admin only: Fetch paginated sent messages.
+ * Query params: page, pageSize, searchQuery, type, scope
  */
 router.get('/admin/outbox', auth.authenticate, auth.requireRole('admin'), async (req, res, next) => {
   const connection = await db.pool.getConnection();
   try {
-    const [rows] = await connection.execute(
+    const {
+      page = '1',
+      pageSize = '10',
+      searchQuery,
+      type,
+      scope,
+    } = req.query;
+
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limit   = Math.min(100, Math.max(1, parseInt(pageSize, 10) || 10));
+    const offset  = (pageNum - 1) * limit;
+
+    // ── Build WHERE clause ────────────────────────────────────────────────
+    const conditions = ['m.sender_id = ?'];
+    const params     = [req.user.id];
+
+    if (searchQuery) {
+      conditions.push('(m.subject LIKE ? OR u.full_name LIKE ?)');
+      const like = `%${searchQuery}%`;
+      params.push(like, like);
+    }
+
+    if (type && type !== 'all' && type !== 'All Types') {
+      conditions.push('m.message_type = ?');
+      params.push(type.toLowerCase());
+    }
+
+    if (scope === 'Broadcast') {
+      conditions.push('m.is_broadcast = TRUE');
+    } else if (scope === 'Targeted') {
+      conditions.push('m.is_broadcast = FALSE');
+    }
+
+    const whereClause = conditions.join(' AND ');
+
+    // ── Count total ───────────────────────────────────────────────────────
+    const [countRows] = await connection.query(
+      `SELECT COUNT(*) as total FROM messages m
+       JOIN users u ON m.sender_id = u.id
+       WHERE ${whereClause}`,
+      params
+    );
+    const totalCount = countRows[0].total;
+
+    if (totalCount === 0) {
+      return res.json({ data: [], totalCount: 0, pageCount: 0 });
+    }
+
+    // ── Fetch paginated rows ──────────────────────────────────────────────
+    const [rows] = await connection.query(
       `SELECT m.*, u.full_name as sender_name 
        FROM messages m 
        JOIN users u ON m.sender_id = u.id 
-       WHERE m.sender_id = ? 
-       ORDER BY m.created_at DESC`,
-      [req.user.id]
+       WHERE ${whereClause}
+       ORDER BY m.created_at DESC
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
     );
-    
-    // Map to expected Flutter format (nesting sender name)
-    const result = rows.map(m => ({
+
+    const data = rows.map(m => ({
       ...m,
       sender: { full_name: m.sender_name }
     }));
 
-    res.json(result);
+    res.json({ data, totalCount, pageCount: Math.ceil(totalCount / limit) });
   } catch (err) {
     next(err);
   } finally {
@@ -211,32 +261,76 @@ router.get('/admin/report/:messageId', auth.authenticate, auth.requireRole('admi
 
 /**
  * GET /api/messages/business/inbox
- * Business only: Fetch received messages.
+ * Business only: Fetch paginated received messages.
+ * Query params: page, pageSize, includeArchived, searchQuery
  */
 router.get('/business/inbox', auth.authenticate, auth.requireRole('business'), async (req, res, next) => {
   const connection = await db.pool.getConnection();
   try {
-    const { includeArchived } = req.query;
+    const {
+      page = '1',
+      pageSize = '10',
+      includeArchived,
+      searchQuery,
+      type,
+    } = req.query;
 
-    const [biz] = await connection.execute('SELECT id FROM businesses WHERE user_id = ?', [req.user.id]);
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limit   = Math.min(100, Math.max(1, parseInt(pageSize, 10) || 10));
+    const offset  = (pageNum - 1) * limit;
+
+    const [biz] = await connection.query('SELECT id FROM businesses WHERE user_id = ?', [req.user.id]);
     if (biz.length === 0) return res.status(403).json({ message: 'No business found' });
     const businessId = biz[0].id;
 
-    let query = `SELECT mr.*, m.message_type, m.subject, m.content, m.is_broadcast, m.created_at as sent_at, u.full_name as sender_name
-                 FROM message_recipients mr
-                 JOIN messages m ON mr.message_id = m.id
-                 JOIN users u ON m.sender_id = u.id
-                 WHERE mr.business_id = ?`;
-    
+    // ── Build WHERE clause ────────────────────────────────────────────────
+    const conditions = ['mr.business_id = ?'];
+    const params     = [businessId];
+
     if (includeArchived !== 'true') {
-      query += ` AND mr.status != 'archived'`;
+      conditions.push("mr.status != 'archived'");
     }
 
-    query += ` ORDER BY mr.created_at DESC`;
+    if (searchQuery) {
+      conditions.push('(m.subject LIKE ? OR m.content LIKE ?)');
+      const like = `%${searchQuery}%`;
+      params.push(like, like);
+    }
 
-    const [rows] = await connection.execute(query, [businessId]);
+    if (type && type !== 'all' && type !== 'All') {
+      conditions.push('m.message_type = ?');
+      params.push(type.toLowerCase());
+    }
 
-    const result = rows.map(r => ({
+    const whereClause = conditions.join(' AND ');
+
+    // ── Count total ───────────────────────────────────────────────────────
+    const [countRows] = await connection.query(
+      `SELECT COUNT(*) as total
+       FROM message_recipients mr
+       JOIN messages m ON mr.message_id = m.id
+       WHERE ${whereClause}`,
+      params
+    );
+    const totalCount = countRows[0].total;
+
+    if (totalCount === 0) {
+      return res.json({ data: [], totalCount: 0, pageCount: 0 });
+    }
+
+    // ── Fetch paginated rows ──────────────────────────────────────────────
+    const [rows] = await connection.query(
+      `SELECT mr.*, m.message_type, m.subject, m.content, m.is_broadcast, m.created_at as sent_at, u.full_name as sender_name
+       FROM message_recipients mr
+       JOIN messages m ON mr.message_id = m.id
+       JOIN users u ON m.sender_id = u.id
+       WHERE ${whereClause}
+       ORDER BY mr.created_at DESC
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+
+    const data = rows.map(r => ({
       ...r,
       message: {
         message_type: r.message_type,
@@ -248,7 +342,7 @@ router.get('/business/inbox', auth.authenticate, auth.requireRole('business'), a
       }
     }));
 
-    res.json(result);
+    res.json({ data, totalCount, pageCount: Math.ceil(totalCount / limit) });
   } catch (err) {
     next(err);
   } finally {

@@ -7,32 +7,89 @@ const router = express.Router();
 
 /**
  * GET /api/business/guest-records
- * Fetch all guest records for a business
+ * Fetch paginated guest records for a business with optional filters.
+ * Query params: businessId, page, pageSize, status, checkInFrom, checkOutTo,
+ *               purpose, transport
  */
 router.get('/guest-records', auth.authenticate, auth.requireRole('business'), async (req, res, next) => {
   const connection = await db.pool.getConnection();
   try {
-    const { businessId } = req.query;
+    const {
+      businessId,
+      page = '1',
+      pageSize = '10',
+      fetchAll,
+      status,
+      checkInFrom,
+      checkOutTo,
+      purpose,
+      transport,
+    } = req.query;
 
     if (!businessId) {
       return res.status(400).json({ message: 'Missing businessId parameter' });
     }
 
-    // Fetch guest records
-    const [records] = await connection.execute(
-      `SELECT id, business_id, check_in, check_out, total_guests, rooms_occupied, 
-              purpose_of_visit, transportation_mode, status, created_at
-       FROM guest_records 
-       WHERE business_id = ? AND is_deleted = FALSE 
-       ORDER BY check_in DESC`,
-      [businessId]
-    );
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limit   = Math.min(100, Math.max(1, parseInt(pageSize, 10) || 10));
+    const offset  = (pageNum - 1) * limit;
 
-    if (records.length === 0) {
-      return res.json([]);
+    // ── Build WHERE clause ────────────────────────────────────────────────
+    const conditions = ['business_id = ?', 'is_deleted = FALSE'];
+    const params     = [businessId];
+
+    if (status === 'archived') {
+      conditions.push("status = 'archived'");
+    } else {
+      conditions.push("status = 'active'");
     }
 
-    // Fetch breakdowns for all these records
+    if (checkInFrom) {
+      conditions.push('check_in >= ?');
+      params.push(checkInFrom);
+    }
+    if (checkOutTo) {
+      conditions.push('check_out <= ?');
+      params.push(checkOutTo);
+    }
+    if (purpose && purpose !== 'All') {
+      conditions.push('purpose_of_visit = ?');
+      params.push(purpose);
+    }
+    if (transport && transport !== 'All') {
+      conditions.push('transportation_mode = ?');
+      params.push(transport);
+    }
+    const whereClause = conditions.join(' AND ');
+
+    // ── Count total matching rows ─────────────────────────────────────────
+    let totalCount = 0;
+    if (fetchAll !== 'true') {
+      const [countRows] = await connection.query(
+        `SELECT COUNT(*) as total FROM guest_records WHERE ${whereClause}`,
+        params
+      );
+      totalCount = countRows[0].total;
+
+      if (totalCount === 0) {
+        return res.json({ data: [], totalCount: 0, pageCount: 0 });
+      }
+    }
+
+    // ── Fetch guest records ──────────────────────────────────────────────
+    let query = `SELECT id, business_id, check_in, check_out, total_guests, rooms_occupied, 
+                        purpose_of_visit, transportation_mode, status, created_at
+                 FROM guest_records 
+                 WHERE ${whereClause}
+                 ORDER BY check_in DESC`;
+    const queryParams = [...params];
+    if (fetchAll !== 'true') {
+      query += ' LIMIT ? OFFSET ?';
+      queryParams.push(limit, offset);
+    }
+    const [records] = await connection.query(query, queryParams);
+
+    // ── Fetch breakdowns for these records ────────────────────────────────
     const recordIds = records.map(r => r.id);
     const placeholders = recordIds.map(() => '?').join(',');
     const [breakdowns] = await connection.execute(
@@ -43,7 +100,6 @@ router.get('/guest-records', auth.authenticate, auth.requireRole('business'), as
       recordIds
     );
 
-    // Group breakdowns by guest_record_id
     const breakdownsByRecord = {};
     for (const b of breakdowns) {
       if (!breakdownsByRecord[b.guest_record_id]) {
@@ -62,13 +118,15 @@ router.get('/guest-records', auth.authenticate, auth.requireRole('business'), as
       });
     }
 
-    // Attach breakdowns to records
-    const result = records.map(r => ({
+    const data = records.map(r => ({
       ...r,
       guest_breakdowns: breakdownsByRecord[r.id] || []
     }));
 
-    res.json(result);
+    if (fetchAll === 'true') {
+      return res.json(data);
+    }
+    res.json({ data, totalCount, pageCount: Math.ceil(totalCount / limit) });
   } catch (err) {
     next(err);
   } finally {

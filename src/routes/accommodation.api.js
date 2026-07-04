@@ -9,16 +9,62 @@ const adminGuard = [auth.authenticate, auth.requireRole('admin')];
 
 /**
  * GET /api/admin/accommodations
- * Fetch all businesses with joined user profile
+ * Fetch paginated businesses with joined user profile.
+ * Query params: page, pageSize, status, search
  */
 router.get('/', adminGuard, async (req, res, next) => {
   try {
-    const [rows] = await db.pool.execute(
+    const {
+      page = '1',
+      pageSize = '10',
+      status,
+      search,
+    } = req.query;
+
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limit   = Math.min(100, Math.max(1, parseInt(pageSize, 10) || 10));
+    const offset  = (pageNum - 1) * limit;
+
+    // ── Build WHERE clause ────────────────────────────────────────────────
+    const conditions = ['b.deleted_at IS NULL'];
+    const params     = [];
+
+    if (status && status !== 'all') {
+      conditions.push('b.status = ?');
+      params.push(status);
+    }
+
+    if (search) {
+      conditions.push('(b.business_name LIKE ? OR u.full_name LIKE ?)');
+      const like = `%${search}%`;
+      params.push(like, like);
+    }
+
+    const whereClause = conditions.join(' AND ');
+
+    // ── Count total matching rows ─────────────────────────────────────────
+    const [countRows] = await db.pool.query(
+      `SELECT COUNT(*) as total
+       FROM businesses b
+       JOIN users u ON b.user_id = u.id
+       WHERE ${whereClause}`,
+      params
+    );
+    const totalCount = countRows[0].total;
+
+    if (totalCount === 0) {
+      return res.json({ data: [], totalCount: 0, pageCount: 0 });
+    }
+
+    // ── Fetch paginated rows ──────────────────────────────────────────────
+    const [rows] = await db.pool.query(
       `SELECT b.*, u.full_name, u.email, u.phone
        FROM businesses b
        JOIN users u ON b.user_id = u.id
-       WHERE b.deleted_at IS NULL
-       ORDER BY b.created_at DESC`
+       WHERE ${whereClause}
+       ORDER BY b.created_at DESC
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
     );
 
     const data = rows.map((row) => {
@@ -32,7 +78,7 @@ router.get('/', adminGuard, async (req, res, next) => {
       };
     });
 
-    res.json({ data });
+    res.json({ data, totalCount, pageCount: Math.ceil(totalCount / limit) });
   } catch (err) {
     next(err);
   }

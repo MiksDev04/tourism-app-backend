@@ -227,7 +227,69 @@ function _purgeOrphanedDefinedNames(workbook) {
 
 router.get('/reports', adminGuard, async (req, res, next) => {
   try {
-    const [rows] = await db.pool.execute(
+    const {
+      page = '1',
+      pageSize = '10',
+      month,
+      year,
+      filterBusinessName,
+    } = req.query;
+
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limit   = Math.min(100, Math.max(1, parseInt(pageSize, 10) || 10));
+    const offset  = (pageNum - 1) * limit;
+
+    // ── Build WHERE clause ────────────────────────────────────────────────
+    const conditions = [];
+    const params     = [];
+
+    if (month && month !== 'all' && month !== 'All Months') {
+      const monthIndex = [
+        '', 'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December',
+      ].indexOf(month);
+      if (monthIndex > 0) {
+        conditions.push('rb.period_month = ?');
+        params.push(monthIndex);
+      }
+    }
+
+    if (year && year !== 'all' && year !== 'All Years') {
+      conditions.push('rb.period_year = ?');
+      params.push(parseInt(year, 10));
+    }
+
+    if (filterBusinessName && filterBusinessName !== 'all' && filterBusinessName !== 'All') {
+      if (filterBusinessName === 'Total') {
+        conditions.push("r.report_type = 'total'");
+      } else {
+        conditions.push('b.business_name = ?');
+        params.push(filterBusinessName);
+      }
+    }
+
+    const whereClause = conditions.length > 0
+      ? 'WHERE ' + conditions.join(' AND ')
+      : '';
+
+    // ── Count total ───────────────────────────────────────────────────────
+    const [countRows] = await db.pool.query(
+      `SELECT COUNT(*) as total
+       FROM reports r
+       JOIN report_batches rb ON rb.id = r.batch_id
+       LEFT JOIN businesses b  ON b.id  = r.business_id
+       LEFT JOIN users     u  ON rb.generated_by = u.id
+       ${whereClause}`,
+      params
+    );
+    const totalCount = countRows[0].total;
+
+    if (totalCount === 0) {
+      return res.json({ data: [], totalCount: 0, pageCount: 0 });
+    }
+
+    // ── Fetch paginated rows ──────────────────────────────────────────────
+    const [rows] = await db.pool.query(
       `SELECT r.id, r.batch_id, r.business_id, r.report_type, r.file_url,
                rb.report_scope, rb.period_month, rb.period_year,
                rb.generated_at, rb.generated_by,
@@ -237,8 +299,12 @@ router.get('/reports', adminGuard, async (req, res, next) => {
         JOIN report_batches rb ON rb.id = r.batch_id
         LEFT JOIN businesses b  ON b.id  = r.business_id
         LEFT JOIN users     u  ON rb.generated_by = u.id
-        ORDER BY rb.generated_at DESC`
+        ${whereClause}
+        ORDER BY rb.generated_at DESC
+        LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
     );
+
     const data = rows.map(row => ({
       ...row,
       pdf_url: row.file_url
@@ -248,7 +314,8 @@ router.get('/reports', adminGuard, async (req, res, next) => {
         : null,
       report_type: row.report_type || 'business',
     }));
-    res.json(data);
+
+    res.json({ data, totalCount, pageCount: Math.ceil(totalCount / limit) });
   } catch (err) {
     next(err);
   }

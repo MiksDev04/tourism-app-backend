@@ -8,15 +8,117 @@ const router = express.Router();
 
 /**
  * GET /api/admin/compliance/activity-summary
- * Admin only: Fetches business activity metrics.
+ * Admin only: Fetches paginated business activity metrics.
+ * Query params: page, pageSize, searchQuery, activityStatus, businessStatus, businessLine
  */
 router.get('/activity-summary', auth.authenticate, auth.requireRole('admin'), async (req, res, next) => {
   const connection = await db.pool.getConnection();
   try {
-    // Grouping by non-JSON columns only to avoid MySQL ER_JSON_USED_AS_KEY errors.
-    // CAST(total_records AS SIGNED) etc. doesn't help with JSON serialization in JS,
-    // so we convert to Number manually in map.
-    const [rows] = await connection.execute(`
+    const {
+      page = '1',
+      pageSize = '10',
+      searchQuery,
+      activityStatus,
+      businessStatus,
+      businessLine,
+    } = req.query;
+
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limit   = Math.min(100, Math.max(1, parseInt(pageSize, 10) || 10));
+    const offset  = (pageNum - 1) * limit;
+
+    // ── Build WHERE + HAVING clauses ──────────────────────────────────────
+    const whereConditions = ["b.status IN ('approved', 'warning')", 'b.deleted_at IS NULL'];
+    const whereParams     = [];
+
+    if (businessStatus && businessStatus !== 'all' && businessStatus !== 'All Business Statuses') {
+      whereConditions.push('b.status = ?');
+      whereParams.push(businessStatus.toLowerCase());
+    }
+
+    const havingConditions = [];
+    const havingParams     = [];
+
+    if (searchQuery) {
+      havingConditions.push('b.business_name LIKE ?');
+      havingParams.push(`%${searchQuery}%`);
+    }
+
+    if (activityStatus && activityStatus !== 'all' && activityStatus !== 'All Statuses') {
+      const statusMap = {
+        'active': 'active',
+        'low activity': 'low_activity',
+        'inactive': 'inactive',
+        'no activity': 'no_activity',
+      };
+      const mapped = statusMap[activityStatus.toLowerCase()];
+      if (mapped) {
+        havingConditions.push(`CASE
+          WHEN COUNT(gr.id) = 0 THEN 'no_activity'
+          WHEN MAX(gr.created_at) < DATE_SUB(NOW(), INTERVAL 30 DAY) THEN 'inactive'
+          WHEN MAX(gr.created_at) < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 'low_activity'
+          ELSE 'active'
+        END = ?`);
+        havingParams.push(mapped);
+      }
+    }
+
+    const whereClause  = whereConditions.join(' AND ');
+    const havingClause = havingConditions.length > 0
+      ? 'HAVING ' + havingConditions.join(' AND ')
+      : '';
+
+    // ── Count total matching rows ─────────────────────────────────────────
+    const countSql = `
+      SELECT COUNT(*) as total FROM (
+        SELECT b.id
+        FROM businesses b
+        LEFT JOIN guest_records gr
+          ON  gr.business_id = b.id
+          AND gr.is_deleted  = FALSE
+        WHERE ${whereClause}
+        GROUP BY b.id, b.business_name, b.status
+        ${havingClause}
+      ) cnt`;
+
+    const [countRows] = await connection.query(countSql, [...whereParams, ...havingParams]);
+    const totalCount = countRows[0].total;
+
+    if (totalCount === 0) {
+      return res.json({ data: [], totalCount: 0, pageCount: 0, summaryCounts: { active: 0, lowActivity: 0, inactive: 0 } });
+    }
+
+    // ── Fetch summary counts (unfiltered by pagination) ───────────────────
+    const [summaryRows] = await connection.query(`
+      SELECT activity_status, COUNT(*) AS cnt
+      FROM (
+        SELECT
+          CASE
+            WHEN COUNT(gr.id) = 0 THEN 'no_activity'
+            WHEN MAX(gr.created_at) < DATE_SUB(NOW(), INTERVAL 30 DAY) THEN 'inactive'
+            WHEN MAX(gr.created_at) < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 'low_activity'
+            ELSE 'active'
+          END AS activity_status
+        FROM businesses b
+        LEFT JOIN guest_records gr
+          ON  gr.business_id = b.id
+          AND gr.is_deleted  = FALSE
+        WHERE b.status IN ('approved', 'warning')
+          AND b.deleted_at IS NULL
+        GROUP BY b.id
+      ) sub
+      GROUP BY activity_status
+    `);
+
+    const summaryCounts = { active: 0, lowActivity: 0, inactive: 0 };
+    for (const row of summaryRows) {
+      if (row.activity_status === 'active') summaryCounts.active = row.cnt;
+      else if (row.activity_status === 'low_activity') summaryCounts.lowActivity = row.cnt;
+      else summaryCounts.inactive = (summaryCounts.inactive || 0) + row.cnt;
+    }
+
+    // ── Fetch paginated rows ──────────────────────────────────────────────
+    const sql = `
       SELECT
         b.id,
         b.business_name,
@@ -38,22 +140,24 @@ router.get('/activity-summary', auth.authenticate, auth.requireRole('admin'), as
       LEFT JOIN guest_records gr
         ON  gr.business_id = b.id
         AND gr.is_deleted  = FALSE
-      WHERE b.status     IN ('approved', 'warning')
-        AND b.deleted_at IS NULL
+      WHERE ${whereClause}
       GROUP BY
         b.id,
         b.business_name,
         b.status
+      ${havingClause}
       ORDER BY last_activity DESC
-    `);
+      LIMIT ? OFFSET ?`;
 
-    const result = rows.map(r => ({
+    const [rows] = await connection.query(sql, [...whereParams, ...havingParams, limit, offset]);
+
+    const data = rows.map(r => ({
       ...r,
       total_records: Number(r.total_records),
       total_guests: Number(r.total_guests)
     }));
 
-    res.json(result);
+    res.json({ data, totalCount, pageCount: Math.ceil(totalCount / limit), summaryCounts });
   } catch (err) {
     next(err);
   } finally {

@@ -43,6 +43,12 @@ app.get('/health', async (req, res) => await res.json({ status: 'ok' }));
 
 app.use(verifyApiKey); // Protect all subsequent API routes with API Key
 
+app.use((req, res, next) => {
+  // Middleware logic here
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
