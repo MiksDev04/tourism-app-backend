@@ -290,18 +290,18 @@ router.get('/reports', adminGuard, async (req, res, next) => {
 
     // ── Fetch paginated rows ──────────────────────────────────────────────
     const [rows] = await db.pool.query(
-      `SELECT r.id, r.batch_id, r.business_id, r.report_type, r.file_url,
-               rb.report_scope, rb.period_month, rb.period_year,
-               rb.generated_at, rb.generated_by,
-               u.full_name AS generated_by_name,
-               b.business_name
-        FROM reports r
-        JOIN report_batches rb ON rb.id = r.batch_id
-        LEFT JOIN businesses b  ON b.id  = r.business_id
-        LEFT JOIN users     u  ON rb.generated_by = u.id
-        ${whereClause}
-        ORDER BY rb.generated_at DESC
-        LIMIT ? OFFSET ?`,
+       `SELECT r.id, r.batch_id, r.business_id, r.report_type, r.file_url, r.created_at,
+                rb.report_scope, rb.period_month, rb.period_year,
+                rb.generated_at, rb.generated_by,
+                u.full_name AS generated_by_name,
+                b.business_name
+         FROM reports r
+         JOIN report_batches rb ON rb.id = r.batch_id
+         LEFT JOIN businesses b  ON b.id  = r.business_id
+         LEFT JOIN users     u  ON rb.generated_by = u.id
+         ${whereClause}
+         ORDER BY r.created_at DESC
+         LIMIT ? OFFSET ?`,
       [...params, limit, offset]
     );
 

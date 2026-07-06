@@ -78,10 +78,10 @@ router.get('/guest-records', auth.authenticate, auth.requireRole('business'), as
 
     // ── Fetch guest records ──────────────────────────────────────────────
     let query = `SELECT id, business_id, check_in, check_out, total_guests, rooms_occupied, 
-                        purpose_of_visit, transportation_mode, status, created_at
+                        purpose_of_visit, transportation_mode, status
                  FROM guest_records 
                  WHERE ${whereClause}
-                 ORDER BY created_at DESC`;
+                 ORDER BY check_in DESC`;
     const queryParams = [...params];
     if (fetchAll !== 'true') {
       query += ' LIMIT ? OFFSET ?';
